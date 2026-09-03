@@ -173,11 +173,12 @@ class PackageManager:
 
         logger.info("Plugin venv self-test passed (isolated daemon ping/pong).")
 
-    def resolve_and_install_all(
+    def resolve_and_install_all(  # noqa: C901
         self,
         dependencies: dict[str, str],
         plugin_dir: Path,
         progress_callback: Callable[[int], None] | None = None,
+        log_callback: Callable[[str], None] | None = None,
     ):
         """Install the plugin's dependencies into its standalone virtual environment.
 
@@ -187,6 +188,7 @@ class PackageManager:
             plugin_dir (Path): Directory containing the plugin.
             progress_callback (Callable[[int], None] | None): Callback receiving installation
                 progress percentages.
+            log_callback (Callable[[str], None] | None): Callback receiving log messages.
 
         Raises:
             RuntimeError: If `uv` is unavailable or environment creation, dependency
@@ -195,6 +197,8 @@ class PackageManager:
         if not dependencies:
             if progress_callback:
                 progress_callback(100)
+            if log_callback:
+                log_callback("No python dependencies to install.")
             return
 
         venv_dir = plugin_dir / ".venv"
@@ -209,6 +213,9 @@ class PackageManager:
             len(reqs),
         )
         logger.debug("Plugin dependency requirement list: %s", reqs)
+
+        if log_callback:
+            log_callback(f"Bootstrapping isolated environment in {venv_dir}...")
 
         if progress_callback:
             progress_callback(5)
@@ -227,13 +234,37 @@ class PackageManager:
         # Install packages into the interpreter
         install_cmd = [uv_path, "pip", "install", "--python", str(venv_python)] + reqs
         logger.info("Installing plugin dependencies: %s", " ".join(install_cmd))
-        result = subprocess.run(install_cmd, capture_output=True, text=True, **sp_kwargs)
-        if result.returncode != 0:
+
+        if log_callback:
+            log_callback("\nResolving and installing dependencies...")
+
+        process = subprocess.Popen(
+            install_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **sp_kwargs
+        )
+
+        if process.stdout:
+            for line in process.stdout:
+                line = line.strip()
+                if line and log_callback:
+                    log_callback(line)
+
+        process.wait()
+        if process.returncode != 0:
+            cmd_str = " ".join(install_cmd)
             raise RuntimeError(
-                f"Failed to install dependencies: {result.stderr}\nCommand: {' '.join(install_cmd)}"
+                f"Failed to install dependencies (code {process.returncode})\nCommand: {cmd_str}"
+            )
+
+        if log_callback:
+            log_callback(
+                "\nRunning plugin self-test... "
+                "(this may take a minute on first install due to JIT compilation)"
             )
 
         self._run_selftest(plugin_dir)
+
+        if log_callback:
+            log_callback("Self-test passed! Installation complete.")
 
         if progress_callback:
             progress_callback(100)
