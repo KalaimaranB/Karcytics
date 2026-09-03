@@ -13,6 +13,7 @@ class PluginDependencyInstallerWorker(QThread):
     """Background thread to download, cache, and link dependencies for a plugin."""
 
     progress = pyqtSignal(int)
+    log_message = pyqtSignal(str)
     finished = pyqtSignal(bool, str)
 
     def __init__(self, plugin_dir: Path | str, cache_dir: Path | None = None):
@@ -61,7 +62,10 @@ class PluginDependencyInstallerWorker(QThread):
                 return
 
             self.pm.resolve_and_install_all(
-                dependencies, self.plugin_dir, lambda p: self.progress.emit(p)
+                dependencies,
+                self.plugin_dir,
+                progress_callback=lambda p: self.progress.emit(p),
+                log_callback=lambda m: self.log_message.emit(m),
             )
             self.finished.emit(True, "")
 
