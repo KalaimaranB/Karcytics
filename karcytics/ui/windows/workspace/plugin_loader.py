@@ -333,6 +333,28 @@ class PluginLoaderManager:
         else:
             daemon.pending_workflow = False
 
+        # core_intro's own module-phase steps can't reach across this
+        # process boundary any more than anything else here can (see
+        # _instantiate_isolated_overlay's own docstring) — when the Hub's
+        # tour is the reason this module is opening, hand its in-module
+        # continuation off to this plugin's own local Academy course
+        # instead (see karcytics_plugins.flow_cytometry.tutorials
+        # .core_intro_handoff, and this daemon's own pending_workflow
+        # above for the identical staging pattern). The plugin reports
+        # back via an "academy_handoff_complete" event once that course
+        # finishes — see _wire_academy_handoff_forwarding in
+        # karcytics.core.plugins.loader.
+        from karcytics.core.tutorial_manager import global_tutorial_manager
+
+        active_course = global_tutorial_manager.active_course
+        current_step = global_tutorial_manager.current_step
+        daemon.pending_academy_handoff = bool(
+            active_course
+            and active_course.id == "core_intro_v1"
+            and current_step
+            and current_step.id == "ws_open_module_action"
+        )
+
         try:
             mw.wizard_panel = PanelClass()
             assert mw.wizard_panel is not None

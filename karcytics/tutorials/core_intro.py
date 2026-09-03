@@ -25,14 +25,13 @@ Journey:
   ├── 13. Module cards & recent sessions, dashboard layout
   └── 14. [WaitForEvent: MODULE_OPENED] — user opens the module (spotlight the Flow Cytometry card)
 
-  Analysis Panel (Flow Cytometry)
-  ├── 15. You're in the module! Overview
-  ├── 16. Toolbar
-  ├── 17. File safety: hashing & reproducibility
-  ├── 18. Download the demo FCS file (auto-placed in Downloads)
-  ├── 19. [WaitForEvent: FILE_IMPORTED] — user imports the demo file
-  ├── 20. Workflows explained — save your work
-  └── 21. [WaitForEvent: WORKFLOW_SAVED] — user saves a workflow
+  Flow Cytometry (handed off — run by that plugin's own local Academy
+  engine, see karcytics_plugins.flow_cytometry.tutorials.core_intro_handoff;
+  this Hub course just parks at module_phase_wait while it runs)
+  ├── Welcome, toolbar, file safety
+  ├── Download the demo FCS file (auto-placed in Downloads)
+  ├── Import the demo file
+  └── Save a workflow
 
   Back to Home
   ├── 22. Graduation summary — see the workflow card
@@ -44,67 +43,12 @@ The ``Course.id`` (``core_intro_v1``) is a stable identifier referenced by
 content evolves, so a version bump here should never rename it.
 """
 
-from typing import Any
-
 from karcytics_sdk.plugin.tutorial_models import (
-    ActionStep,
     BranchingStep,
     Course,
     InfoStep,
-    InteractionStep,
     WaitForEventStep,
 )
-
-
-def _copy_demo_file(main_panel: Any) -> None:  # noqa: ARG001
-    """Copy the bundled demo FCS file to the user's Downloads directory.
-
-    If an identical demo file already exists, no copy is performed. Existing files
-    with different contents are preserved by selecting a unique destination name.
-    """
-    import contextlib
-    import shutil
-    from pathlib import Path
-
-    from karcytics.core.resource_manager import resource_path
-
-    # Find the bundled demo file in the repository or MEIPASS
-    src_file = resource_path("karcytics/tutorials/assets/demo_tutorial.fcs")
-
-    if not src_file.exists():
-        return
-
-    # Use QStandardPaths to safely resolve the OS's real Downloads folder
-    from PyQt6.QtCore import QStandardPaths
-
-    download_loc = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
-    downloads_dir = Path(download_loc) if download_loc else Path.home() / "Downloads"
-
-    downloads_dir.mkdir(exist_ok=True, parents=True)
-
-    dest_file = downloads_dir / "demo_tutorial.fcs"
-
-    with contextlib.suppress(Exception):
-        if dest_file.exists():
-            # Check if sizes match to avoid overwriting a user's differently sized file of the same name  # noqa: E501
-            if dest_file.stat().st_size == src_file.stat().st_size:
-                return  # It's already our demo file
-
-            # If size differs, create a unique filename so we don't overwrite their work
-            suffix = 1
-            while True:
-                new_dest = downloads_dir / f"demo_tutorial_{suffix}.fcs"
-                if not new_dest.exists():
-                    dest_file = new_dest
-                    break
-                if new_dest.stat().st_size == src_file.stat().st_size:
-                    return  # Already extracted previously
-                suffix += 1
-
-        shutil.copy(src_file, dest_file)
-
-
-# Demo FCS logic now handled by `_copy_demo_file` action step.
 
 # ── Step definitions ──────────────────────────────────────────────────────────
 
@@ -204,7 +148,7 @@ _steps = [
     InfoStep(
         id="ws_store_catalog_explain",
         text=(
-            "Every module here is signed and checked against our Root CA before it's allowed to show a **🛡️ VERIFIED** badge — that's your guarantee it hasn't been tampered with. Updates get the same check, automatically."  # noqa: E501
+            "Every module here is cryptographically verified by our built-in security checks before it's allowed to run — that's your guarantee it hasn't been tampered with. Updates get the same check, automatically."  # noqa: E501
         ),
         cyto_emotion="talking",
         next_step_id="ws_store_flow_details_action",
@@ -269,92 +213,33 @@ _steps = [
         target_widget_names=["module_card_flow_cytometry"],
         event_name="MODULE_OPENED",
         allow_interaction=True,
-        next_step_id="analysis_landed",
+        next_step_id="module_phase_wait",
     ),
     # ── PHASE 3: Analysis Panel ───────────────────────────────────────────────
+    # Flow Cytometry now runs as a genuinely separate OS process (the V3
+    # isolated engine) — the Hub can no longer findChild() its buttons or
+    # connect to their signals, so this phase's steps (welcome, data
+    # integrity, import the demo file, save the workflow) are no longer
+    # defined here. They live in karcytics_plugins.flow_cytometry.tutorials
+    # .core_intro_handoff, run by that plugin's own local Academy engine —
+    # the same mechanism its course1_fundamentals uses to spotlight its own
+    # real widgets from inside its own process. This step just parks the
+    # Hub's tour while that runs; plugin_loader.py's
+    # _instantiate_isolated_overlay is what actually starts the handoff
+    # course (staged via daemon.pending_academy_handoff, right as this step
+    # becomes current), and karcytics.core.plugins.loader's
+    # _wire_academy_handoff_forwarding is what jumps this tour straight to
+    # analysis_saved_confirm_spotlight once that course reports back done —
+    # this step's own next_step_id below is never actually reached through
+    # the normal Next-button path, only kept so the step is never left in a
+    # dangling state.
     InfoStep(
-        id="analysis_landed",
+        id="module_phase_wait",
         text=(
-            "🧬 Welcome to **Flow Cytometry**! Every module gets a workspace built just for what it does."  # noqa: E501
+            "🧬 Head into **Flow Cytometry** — I'll meet you there to walk through importing data and saving your first workflow."  # noqa: E501
         ),
-        cyto_emotion="surprised",
-        next_step_id="analysis_toolbar",
-    ),
-    InfoStep(
-        id="analysis_toolbar",
-        text=(
-            "Up top: **← Home** takes you back to the dashboard any time, or close this project outright."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        target_widget_names=["analysisToolBar"],
-        next_step_id="analysis_data_integrity",
-    ),
-    InfoStep(
-        id="analysis_data_integrity",
-        text=(
-            "One thing before you import anything: Karcytics never touches your raw files. On import, it hashes the file (SHA-256) and copies it into this project's `` `assets/` `` folder — your original stays exactly where it was, and anyone who opens this project later gets a hash check for free, so silent corruption doesn't slip through."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        next_step_id="analysis_import_auto_download",
-    ),
-    ActionStep(
-        id="analysis_import_auto_download",
-        text="",
-        action=_copy_demo_file,
-        next_step_id="analysis_import_copy_warning",
-    ),
-    InfoStep(
-        id="analysis_import_copy_warning",
-        text=(
-            "Time to import something! I've dropped a demo file (`` `demo_tutorial.fcs` ``) in your Downloads folder.\n\n"  # noqa: E501
-            "When it asks whether to copy the file into your workspace, say yes — that's what keeps the project self-contained. "  # noqa: E501
-            "Skipping the copy is fine for huge files, but it just links to the original — move that file later and Karcytics loses track of it."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        next_step_id="analysis_import_action",
-    ),
-    InteractionStep(
-        id="analysis_import_action",
-        text=(
-            "Click **➕ Add Samples** in the ribbon and pick that"
-            "`` `demo_tutorial.fcs` `` file from Downloads."
-        ),
-        target_widget_name="ImportDataButton",
-        event_trigger="clicked",
         cyto_emotion="pointing",
-        next_step_id="analysis_import_wait",
-    ),
-    WaitForEventStep(
-        id="analysis_import_wait",
-        text="Pick the file and give it a second to load...",
-        cyto_emotion="scanning",
-        event_name="FILE_IMPORTED",
         allow_interaction=True,
-        next_step_id="analysis_workflow_intro",
-    ),
-    InfoStep(
-        id="analysis_workflow_intro",
-        text=(
-            "Loaded! A **Workflow** is a snapshot of everything right now — settings, gates, parameters — so you can pick this exact session back up later."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        next_step_id="analysis_save_action",
-    ),
-    WaitForEventStep(
-        id="analysis_save_action",
-        text=("Let's lock this in. Click **Save Workflow** in the toolbar."),
-        cyto_emotion="happy",
-        target_widget_names=["SaveNewWorkflowButton"],
-        event_name="WORKFLOW_SAVED",
-        allow_interaction=True,
-        next_step_id="analysis_return_home_action",
-    ),
-    InteractionStep(
-        id="analysis_return_home_action",
-        text=("Saved. Now click **← Home** and let's see it show up on your dashboard."),
-        target_widget_name="btn_home",
-        event_trigger="clicked",
-        cyto_emotion="pointing",
         next_step_id="analysis_saved_confirm_spotlight",
     ),
     InfoStep(
