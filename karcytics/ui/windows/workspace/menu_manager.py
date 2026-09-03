@@ -1,9 +1,7 @@
 """Menu Manager for WorkspaceWindow."""
 
-from PyQt6.QtGui import QAction, QKeySequence
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtGui import QAction
 
-from karcytics.core.config import AppConfig
 from karcytics.ui.theme import theme_manager
 
 
@@ -13,116 +11,55 @@ class MenuManager:
 
     def setup_menu_bar(self) -> None:
         """
-        Builds and attaches the application's File, Edit, Theme, and Help menus to the main window.
+        Builds and attaches the application's menus using the SDK StandardMenuBuilder.
         """
         mw = self.main_window
-        menubar = mw.menuBar()
-        assert menubar is not None
 
-        file_menu = QMenu("&File", mw)
-        menubar.addMenu(file_menu)
+        from karcytics_sdk.plugin.menu_builder import StandardMenuBuilder
 
-        # --- Edit Menu for History ---
-        edit_menu = QMenu("&Edit", mw)
-        menubar.addMenu(edit_menu)
+        builder = StandardMenuBuilder(mw)
 
-        undo_action = QAction("&Undo", mw)
-        # Magic cross-platform native Undo shortcut
-        undo_action.setShortcut(QKeySequence.StandardKey.Undo)
-        if hasattr(mw, "trigger_undo"):
-            undo_action.triggered.connect(mw.trigger_undo)
-        edit_menu.addAction(undo_action)
-
-        redo_action = QAction("&Redo", mw)
-        # Magic cross-platform native Redo shortcut
-        redo_action.setShortcut(QKeySequence.StandardKey.Redo)
-        if hasattr(mw, "trigger_redo"):
-            redo_action.triggered.connect(mw.trigger_redo)
-        edit_menu.addAction(redo_action)
-        # -----------------------------
-
+        # --- File Menu ---
         project_view_action = QAction("&Project View", mw)
         project_view_action.setShortcut("Ctrl+H")
         project_view_action.triggered.connect(
             mw.hub_manager.show_home if hasattr(mw, "hub_manager") else mw._show_home
         )
-        file_menu.addAction(project_view_action)
 
         close_project_action = QAction("Close Project && Return to Hub", mw)
         close_project_action.triggered.connect(mw.return_to_hub)
-        file_menu.addAction(close_project_action)
-
-        file_menu.addSeparator()
 
         exit_action = QAction("E&xit", mw)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(mw.close)
+
+        # File actions order (we have a separator, so let's add them separately or just pass them)
+        # StandardMenuBuilder add_file_menu just appends actions. Let's do it manually for the separator.
+        file_menu = builder.add_file_menu([project_view_action, close_project_action])
+        file_menu.addSeparator()
         file_menu.addAction(exit_action)
 
-        theme_menu = QMenu("&Theme", mw)
-        menubar.addMenu(theme_menu)
-
-        # DYNAMIC THEME DISCOVERY
-        categorized_themes = theme_manager.get_categorized_themes()
-        for category, themes in categorized_themes.items():
-            submenu = QMenu(category, mw)
-            for name, path in themes:
-                action = QAction(name, mw)
-                if hasattr(mw, "theme_manager"):
-                    action.triggered.connect(
-                        lambda _checked, p=path: mw.theme_manager.switch_theme(p)
-                    )
-                else:
-                    action.triggered.connect(lambda _checked, p=path: mw._switch_theme(p))
-                submenu.addAction(action)
-            theme_menu.addMenu(submenu)
-
-        # Help Menu
-        help_menu = QMenu("&Help", mw)
-        menubar.addMenu(help_menu)
-
-        docs_action = QAction("📖 Karcytics &Help Center", mw)
-        docs_action.triggered.connect(self.open_help_center)
-        help_menu.addAction(docs_action)
-
-        wiki_action = QAction("🌐 View GitHub Wiki Online", mw)
-        wiki_action.triggered.connect(self.open_wiki_online)
-        help_menu.addAction(wiki_action)
-
-        about_action = QAction("About Karcytics", mw)
-        about_me_action = QAction("About the Developer", mw)
-
-        if not getattr(AppConfig, "_mac_menus_set", False):
-            about_action.setMenuRole(QAction.MenuRole.AboutRole)
-            about_me_action.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
-            AppConfig._mac_menus_set = True
-        else:
-            about_action.setVisible(False)
-            about_me_action.setVisible(False)
-
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
-
-        about_me_action.triggered.connect(self.show_about_developer)
-        help_menu.addAction(about_me_action)
-
-        help_menu.addSeparator()
-
-        restart_tour_action = QAction("♻️ Restart Onboarding Tour", mw)
-        restart_tour_action.triggered.connect(
-            mw.hub_manager.restart_core_intro
-            if hasattr(mw, "hub_manager")
-            else mw._restart_core_intro
+        # --- Edit Menu ---
+        builder.add_edit_menu(
+            undo_cb=mw.trigger_undo if hasattr(mw, "trigger_undo") else None,
+            redo_cb=mw.trigger_redo if hasattr(mw, "trigger_redo") else None,
+            pref_cb=self.open_preferences,
         )
-        help_menu.addAction(restart_tour_action)
 
-        view_logs_action = QAction("📜 View Logs", mw)
-        view_logs_action.triggered.connect(self.view_logs)
-        help_menu.addAction(view_logs_action)
+        # --- View Menu (Theme) ---
+        builder.add_theme_menu(
+            switch_theme_cb=lambda path: theme_manager.load_theme(path),
+            categorized_themes=theme_manager.get_categorized_themes(),
+        )
 
-        diagnostics_action = QAction("🛡️ Diagnostics && Privacy", mw)
-        diagnostics_action.triggered.connect(self.open_diagnostics_settings)
-        help_menu.addAction(diagnostics_action)
+        # --- Help Menu ---
+        builder.add_help_menu(
+            docs_cb=self.open_help_center,
+            wiki_cb=self.open_wiki_online,
+            about_cb=self.show_about,
+            about_dev_cb=self.show_about_developer,
+            onboarding_cb=mw.restart_core_intro if hasattr(mw, "restart_core_intro") else None,
+        )
 
     def open_help_center(self):
         """Launch the localized help center."""
@@ -146,11 +83,15 @@ class MenuManager:
         dialog = LogViewerDialog(self.main_window)
         dialog.exec()
 
-    def open_diagnostics_settings(self):
-        """Open the diagnostics and crash-reporting privacy settings dialog."""
-        from karcytics.ui.dialogs.diagnostics_settings_dialog import DiagnosticsSettingsDialog
+    def open_preferences(self):
+        """Open the unified preferences dialog."""
+        from karcytics.ui.dialogs.preferences_dialog import PreferencesDialog
 
-        dialog = DiagnosticsSettingsDialog(self.main_window)
+        dialog = PreferencesDialog(
+            parent=self.main_window,
+            hub_manager=getattr(self.main_window, "hub_manager", None),
+            workspace_window=self.main_window,
+        )
         dialog.exec()
 
     def show_about(self) -> None:

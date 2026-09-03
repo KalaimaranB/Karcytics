@@ -7,9 +7,6 @@ from typing import TYPE_CHECKING
 
 from karcytics_sdk.plugin import SecondaryButton
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import (
-    QAction,
-)
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -414,8 +411,6 @@ class ProjectLauncherWindow(QMainWindow):
     def _on_recent_context_menu(self, pos):
         import shutil
 
-        from PyQt6.QtWidgets import QMenu
-
         from karcytics.core.config import AppConfig
 
         item = self.list_recent.itemAt(pos)
@@ -566,66 +561,29 @@ class ProjectLauncherWindow(QMainWindow):
         """
         Builds the window's Theme and Help menus with actions for theme selection, help resources, onboarding, and log viewing.
         """
-        menubar = self.menuBar()
-        theme_menu = menubar.addMenu("&Theme")
+        from karcytics_sdk.plugin.menu_builder import StandardMenuBuilder
 
-        # DYNAMIC THEME DISCOVERY
-        categorized_themes = theme_manager.get_categorized_themes()
-        for category, themes in categorized_themes.items():
-            submenu = QMenu(category, self)
-            for name, path in themes:
-                action = QAction(name, self)
-                action.triggered.connect(lambda _checked, p=path: self._switch_theme(p))
-                submenu.addAction(action)
-            theme_menu.addMenu(submenu)
+        builder = StandardMenuBuilder(self)
 
-        # HELP MENU
-        help_menu = menubar.addMenu("&Help")
+        # --- Edit Menu ---
+        builder.add_edit_menu(pref_cb=self._open_preferences)
 
-        docs_action = QAction("📖 Karcytics &Help Center", self)
-        docs_action.triggered.connect(self._open_help_center)
-        help_menu.addAction(docs_action)
+        # --- View Menu (Theme) ---
+        from karcytics.ui.theme import theme_manager
 
-        wiki_action = QAction("🌐 View GitHub Wiki Online", self)
-        wiki_action.triggered.connect(self._open_wiki_online)
-        help_menu.addAction(wiki_action)
+        builder.add_theme_menu(
+            switch_theme_cb=lambda path: self._switch_theme(path),
+            categorized_themes=theme_manager.get_categorized_themes(),
+        )
 
-        about_action = QAction("About Karcytics", self)
-        about_me_action = QAction("About the Developer", self)
-
-        from karcytics.core.config import AppConfig
-
-        if not getattr(AppConfig, "_mac_menus_set", False):
-            about_action.setMenuRole(QAction.MenuRole.AboutRole)
-            about_me_action.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
-            AppConfig._mac_menus_set = True
-        else:
-            about_action.setVisible(False)
-            about_me_action.setVisible(False)
-
-        about_action.triggered.connect(self._show_about)
-        help_menu.addAction(about_action)
-
-        about_me_action.triggered.connect(self._show_about_developer)
-        help_menu.addAction(about_me_action)
-
-        help_menu.addSeparator()
-
-        self.clear_data_action = QAction("🧹 Clear App Data...", self)
-        self.clear_data_action.triggered.connect(self._clear_app_data)
-        help_menu.addAction(self.clear_data_action)
-
-        restart_tour_action = QAction("♻️ Restart Onboarding Tour", self)
-        restart_tour_action.triggered.connect(self._restart_core_intro)
-        help_menu.addAction(restart_tour_action)
-
-        view_logs_action = QAction("📜 View Logs", self)
-        view_logs_action.triggered.connect(self._view_logs)
-        help_menu.addAction(view_logs_action)
-
-        diagnostics_action = QAction("🛡️ Diagnostics && Privacy", self)
-        diagnostics_action.triggered.connect(self._open_diagnostics_settings)
-        help_menu.addAction(diagnostics_action)
+        # --- Help Menu ---
+        builder.add_help_menu(
+            docs_cb=self._open_help_center,
+            wiki_cb=self._open_wiki_online,
+            about_cb=self._show_about,
+            about_dev_cb=self._show_about_developer,
+            onboarding_cb=self._restart_core_intro,
+        )
 
     def _setup_footer(self) -> None:
         """Initialize the footer area."""
@@ -638,11 +596,15 @@ class ProjectLauncherWindow(QMainWindow):
         dialog = LogViewerDialog(self)
         dialog.exec()
 
-    def _open_diagnostics_settings(self):
-        """Open the diagnostics and crash-reporting privacy settings dialog."""
-        from karcytics.ui.dialogs.diagnostics_settings_dialog import DiagnosticsSettingsDialog
+    def _open_preferences(self):
+        """Open the unified preferences dialog."""
+        from karcytics.ui.dialogs.preferences_dialog import PreferencesDialog
 
-        dialog = DiagnosticsSettingsDialog(self)
+        dialog = PreferencesDialog(
+            parent=self,
+            hub_manager=self.hub_manager if hasattr(self, "hub_manager") else self,
+            workspace_window=None,
+        )
         dialog.exec()
 
     def _open_help_center(self):
@@ -691,9 +653,6 @@ class ProjectLauncherWindow(QMainWindow):
             # Tell closeEvent we are clearing data so it doesn't write new preferences
             self._is_clearing_data = True
 
-            # Disable the action to prevent re-triggering
-            self.clear_data_action.setEnabled(False)
-
             # Stop the background update worker if running
             if hasattr(self, "_update_worker") and self._update_worker.isRunning():
                 self._update_worker.requestInterruption()
@@ -710,7 +669,6 @@ class ProjectLauncherWindow(QMainWindow):
                         "Failed to stop background update worker.\n\nCannot safely clear app data.",
                     )
                     self._is_clearing_data = False
-                    self.clear_data_action.setEnabled(True)
                     return
 
             # Close any active logging handlers that may have file locks
