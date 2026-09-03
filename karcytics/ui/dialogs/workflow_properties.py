@@ -1,24 +1,31 @@
+from datetime import datetime
+
+from karcytics_sdk.plugin import DangerButton, PrimaryButton, SecondaryButton
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
+    QFormLayout,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
-from karcytics.shared.ui.alerts import ask_question, show_error
+from karcytics.shared.ui.alerts import ask_question, show_error, show_info
 from karcytics.ui.theme import Colors, theme_manager
 
 
-class WorkflowSettingsDialog(QDialog):
-    """Dialog showing workflow file sizes, tags, and deletion options."""
+class WorkflowPropertiesDialog(QDialog):
+    """Dialog showing workflow file metadata, tags, and deletion options."""
 
     workflow_deleted = pyqtSignal()
     attachment_deleted = pyqtSignal()
+    workflow_updated = pyqtSignal()
 
     def __init__(self, project_manager, module_id: str, filename: str, parent=None):
         super().__init__(parent)
@@ -42,8 +49,8 @@ class WorkflowSettingsDialog(QDialog):
         self.metadata = self.full_data.get("metadata", {})
         self.attachments = self.full_data.get("attachments", [])
 
-        self.setWindowTitle(f"Workflow Settings: {self.metadata.get('name', 'Untitled')}")
-        self.setMinimumSize(450, 400)
+        self.setWindowTitle(f"Workflow Properties: {self.metadata.get('name', 'Untitled')}")
+        self.setMinimumSize(500, 500)
         theme_manager.apply_style(
             self, f"background-color: {Colors.BG_DARK}; color: {Colors.FG_PRIMARY};"
         )
@@ -55,38 +62,74 @@ class WorkflowSettingsDialog(QDialog):
         layout.setSpacing(15)
 
         # Header
-        lbl_title = QLabel("Workflow Settings")
+        lbl_title = QLabel("Workflow Properties")
         theme_manager.apply_style(
             lbl_title, f"font-size: 18px; font-weight: bold; color: {Colors.FG_PRIMARY};"
         )
         layout.addWidget(lbl_title)
 
-        # Tags
-        tags = self.metadata.get("tags", [])
-        if tags:
-            tag_str = " ".join([f"#{t}" for t in tags])
-            lbl_tags = QLabel(f"Tags: {tag_str}")
-            theme_manager.apply_style(
-                lbl_tags, f"color: {Colors.FG_SECONDARY}; font-style: italic;"
-            )
-            layout.addWidget(lbl_tags)
-
-        # Main File Section
-        layout.addWidget(self._create_section_header("Main Workflow File"))
-
+        # File Stats
         wf_size = self.wf_path.stat().st_size if self.wf_path.exists() else 0
         wf_size_str = self._format_size(wf_size)
 
-        main_file_layout = QHBoxLayout()
-        lbl_main_name = QLabel(f"{self.filename}")
-        lbl_main_size = QLabel(wf_size_str)
-        theme_manager.apply_style(lbl_main_size, f"color: {Colors.FG_SECONDARY};")
+        created_str = "Unknown"
+        modified_str = "Unknown"
+        if self.wf_path.exists():
+            stat = self.wf_path.stat()
+            created_str = datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M:%S")
+            modified_str = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
-        main_file_layout.addWidget(lbl_main_name)
-        main_file_layout.addStretch()
-        main_file_layout.addWidget(lbl_main_size)
+        # Form Layout for Metadata
+        form_layout = QFormLayout()
+        form_layout.setSpacing(10)
 
-        layout.addLayout(main_file_layout)
+        self.lbl_name = QLabel(self.metadata.get("name", "Untitled"))
+        form_layout.addRow("Name:", self.lbl_name)
+
+        lbl_size = QLabel(wf_size_str)
+        theme_manager.apply_style(lbl_size, f"color: {Colors.FG_SECONDARY};")
+        form_layout.addRow("Size:", lbl_size)
+
+        lbl_created = QLabel(created_str)
+        theme_manager.apply_style(lbl_created, f"color: {Colors.FG_SECONDARY};")
+        form_layout.addRow("Created:", lbl_created)
+
+        lbl_modified = QLabel(modified_str)
+        theme_manager.apply_style(lbl_modified, f"color: {Colors.FG_SECONDARY};")
+        form_layout.addRow("Modified:", lbl_modified)
+
+        # Editable Tags
+        self.edit_tags = QLineEdit()
+        tags = self.metadata.get("tags", [])
+        self.edit_tags.setText(", ".join(tags))
+        self.edit_tags.setPlaceholderText("tag1, tag2, tag3")
+        theme_manager.apply_style(
+            self.edit_tags,
+            f"background: {Colors.BG_MEDIUM}; border: 1px solid {Colors.BORDER}; color: {Colors.FG_PRIMARY}; padding: 4px; border-radius: 4px;",
+        )
+        form_layout.addRow("Tags:", self.edit_tags)
+
+        # Editable Description
+        self.edit_desc = QTextEdit()
+        self.edit_desc.setPlainText(self.metadata.get("description", ""))
+        self.edit_desc.setPlaceholderText("Workflow description...")
+        self.edit_desc.setMaximumHeight(80)
+        theme_manager.apply_style(
+            self.edit_desc,
+            f"background: {Colors.BG_MEDIUM}; border: 1px solid {Colors.BORDER}; color: {Colors.FG_PRIMARY}; padding: 4px; border-radius: 4px;",
+        )
+        form_layout.addRow("Description:", self.edit_desc)
+
+        layout.addLayout(form_layout)
+
+        # Save Button for Metadata
+        btn_save = PrimaryButton("Save Metadata")
+        btn_save.clicked.connect(self._on_save_metadata)
+
+        save_layout = QHBoxLayout()
+        save_layout.addStretch()
+        save_layout.addWidget(btn_save)
+        layout.addLayout(save_layout)
 
         # Attachments Section
         if self.attachments:
@@ -107,7 +150,9 @@ class WorkflowSettingsDialog(QDialog):
             scroll.setWidget(att_container)
             layout.addWidget(scroll)
         else:
-            layout.addWidget(QLabel("No associated data blocks."))
+            lbl_no_data = QLabel("No associated data blocks.")
+            theme_manager.apply_style(lbl_no_data, f"color: {Colors.FG_SECONDARY};")
+            layout.addWidget(lbl_no_data)
 
         layout.addStretch()
 
@@ -120,17 +165,10 @@ class WorkflowSettingsDialog(QDialog):
 
         lbl_danger = QLabel("Delete Entire Workflow")
         theme_manager.apply_style(
-            lbl_danger, "color: {Colors.ACCENT_DANGER}; font-weight: bold; border: none;"
+            lbl_danger, f"color: {Colors.ACCENT_DANGER}; font-weight: bold; border: none;"
         )
 
-        btn_delete_wf = QPushButton("Delete")
-        theme_manager.apply_style(
-            btn_delete_wf,
-            f"""
-            QPushButton {{ background: {Colors.ACCENT_DANGER}44; color: {Colors.ACCENT_DANGER}; border: 1px solid {Colors.ACCENT_DANGER}; border-radius: 4px; padding: 4px 12px; }}
-            QPushButton:hover {{ background: {Colors.ACCENT_DANGER}; color: white; }}
-        """,
-        )
+        btn_delete_wf = DangerButton("Delete")
         btn_delete_wf.clicked.connect(self._on_delete_workflow)
 
         danger_layout.addWidget(lbl_danger)
@@ -140,14 +178,7 @@ class WorkflowSettingsDialog(QDialog):
         layout.addWidget(danger_frame)
 
         # Close
-        btn_close = QPushButton("Close")
-        theme_manager.apply_style(
-            btn_close,
-            f"""
-            QPushButton {{ background: {Colors.BG_MEDIUM}; border: 1px solid {Colors.BORDER}; padding: 6px; border-radius: 4px; }}
-            QPushButton:hover {{ background: {Colors.BG_LIGHT}; }}
-        """,
-        )
+        btn_close = SecondaryButton("Close")
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close)
 
@@ -155,7 +186,7 @@ class WorkflowSettingsDialog(QDialog):
         lbl = QLabel(text)
         theme_manager.apply_style(
             lbl,
-            f"font-weight: bold; color: {Colors.FG_PRIMARY}; margin-top: 10px; border-bottom: 1px solid {Colors.BORDER};",
+            f"font-weight: bold; color: {Colors.FG_PRIMARY}; margin-top: 10px; border-bottom: 1px solid {Colors.BORDER}; padding-bottom: 4px;",
         )
         return lbl
 
@@ -197,6 +228,31 @@ class WorkflowSettingsDialog(QDialog):
             size /= 1024.0
         return f"{size:.1f} TB"
 
+    def _on_save_metadata(self):
+        tags_raw = self.edit_tags.text()
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+        desc = self.edit_desc.toPlainText().strip()
+
+        self.metadata["tags"] = tags
+        self.metadata["description"] = desc
+
+        try:
+            self.project_manager.save_workflow(
+                self.module_id,
+                self.payload,
+                self.metadata,
+                self.filename,
+                self.attachments,
+            )
+            self.full_data["metadata"] = self.metadata
+            self.workflow_updated.emit()
+            show_info(self, "Success", "Workflow metadata updated successfully.")
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).error(f"Failed to save metadata: {e}")
+            show_error(self, "Error", f"Failed to save metadata:\n{str(e)}")
+
     def _on_delete_attachment(self, key: str, name: str):
         if ask_question(
             self,
@@ -205,7 +261,7 @@ class WorkflowSettingsDialog(QDialog):
         ):
             if self.project_manager.delete_workflow_attachment(self.filename, key):
                 self.attachment_deleted.emit()
-                self.accept()  # Close and let caller refresh
+                self.accept()
             else:
                 show_error(self, "Error", "Failed to delete attachment.")
 
