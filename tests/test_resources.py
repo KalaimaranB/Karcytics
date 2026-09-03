@@ -14,8 +14,8 @@ class TestKarcyticsResources(unittest.TestCase):
 
     def test_core_icon_exists(self):
         """Verify the main application icon is in the correct location."""
-        # Our updated .spec and __main__.py expect icon.icns at the root (or MEIPASS root)
-        path = resource_path("icon.icns")
+        # Our updated .spec and __main__.py expect logo.icns at the root (or MEIPASS root)
+        path = resource_path("logo.icns")
         self.assertTrue(path.exists(), f"CRITICAL: Application icon missing at {path}")
 
     def test_themes_exist(self):

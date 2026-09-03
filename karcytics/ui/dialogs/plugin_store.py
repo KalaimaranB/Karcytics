@@ -774,16 +774,27 @@ class PluginStoreDialog(QDialog):
     def closeEvent(self, event):  # noqa: N802
         """
         Clean up background work and event subscriptions when the dialog closes.
+
+        ``worker.quit()`` only signals Qt's own event loop to stop — it has no
+        effect on ``StoreLoaderWorker.run()``, which is pure Python (no Qt event
+        loop). To avoid blocking the main thread on in-flight HTTP requests we
+        give the thread a short grace period (2 s) and forcibly terminate if it
+        still hasn't exited. This prevents the macOS spinning beach-ball when
+        the store is closed while the store-loader is mid-request.
         """
         import logging
 
         logger = logging.getLogger(__name__)
 
         if hasattr(self, "worker") and self.worker.isRunning():
-            logger.debug("PluginStoreDialog closing: Terminating running StoreLoaderWorker...")
+            logger.debug("PluginStoreDialog closing: requesting StoreLoaderWorker stop...")
             self.worker.quit()
-            self.worker.wait()
-            logger.debug("StoreLoaderWorker terminated successfully on dialog close.")
+            # Give the thread up to 2 s to finish any in-progress work gracefully.
+            if not self.worker.wait(2000):
+                logger.warning("StoreLoaderWorker did not stop within 2 s — terminating forcibly.")
+                self.worker.terminate()
+                self.worker.wait(1000)
+            logger.debug("StoreLoaderWorker stopped on dialog close.")
 
         event_bus.unsubscribe(KarcyticsEvent.PLUGIN_INSTALLED, self._on_plugin_event)
         event_bus.unsubscribe(KarcyticsEvent.PLUGIN_REMOVED, self._on_plugin_event)

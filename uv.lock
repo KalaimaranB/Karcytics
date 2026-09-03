@@ -484,7 +484,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "karcytics-sdk"
-version = "2.0.7"
+version = "2.0.9"
 source = { editable = "../Karcytics-SDK" }
 dependencies = [
     { name = "cryptography" },

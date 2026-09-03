@@ -363,8 +363,14 @@ class ProjectLauncherWindow(QMainWindow):
         if not ok or not name.strip():
             return
 
+        from PyQt6.QtCore import QStandardPaths
+
+        docs_path = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.DocumentsLocation
+        )
+
         dir_path = QFileDialog.getExistingDirectory(
-            self, "Select Empty Folder for Project Workspace"
+            self, "Select Empty Folder for Project Workspace", docs_path
         )
         if not dir_path:
             return

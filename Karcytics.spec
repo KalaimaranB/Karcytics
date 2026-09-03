@@ -6,6 +6,8 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 # Prevent PyInstaller from crashing when tracing PyTorch's massive dependency tree
 sys.setrecursionlimit(5000)
 
+icon_file = 'logo.icns' if sys.platform == 'darwin' else 'logo.ico'
+
 # 1. Force-collect heavy core libraries
 pil_bins, pil_datas, pil_hidden = collect_all('PIL')
 cert_bins, cert_datas, cert_hidden = collect_all('certifi')
@@ -106,7 +108,7 @@ a = Analysis(
         ('karcytics/plugins', 'karcytics/plugins'),
         ('karcytics/tutorials/assets', 'karcytics/tutorials/assets'),
         ('docs', 'docs'),
-        ('icon.icns', '.'),
+        (icon_file, '.'),
         ('pyproject.toml', '.')
     ] + all_datas,
     hiddenimports=hidden_imports + all_hidden,
@@ -136,7 +138,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.icns',
+    icon=icon_file,
 )
 
 coll = COLLECT(
@@ -154,6 +156,6 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
         name='Karcytics.app',
-        icon='icon.icns',
+        icon=icon_file,
         bundle_identifier='com.karcytics.analysis',
     )
