@@ -2,24 +2,36 @@
 
 Nothing here ever sends anything without an explicit, persisted opt-in
 (see `is_consent_given`/`set_consent`) — the tri-state default is
-"undecided", not "on". A DSN also has to be configured out of band (via the
-`KARCYTICS_SENTRY_DSN` environment variable, not hardcoded here) or this
-stays a no-op regardless of consent; there's no bundled project to send to.
+"undecided", not "on". A DSN also has to be configured out of band (baked
+into the frozen binary by ``Karcytics.spec`` at build time via the
+``KARCYTICS_SENTRY_DSN`` CI secret) **and** the app must be running as a
+frozen production build (``sys.frozen``). Source-tree dev runs never send
+crash reports, regardless of any environment variable.
 
 `_before_send` exists because this app handles flow-cytometry data, where a
 file path is very often also a sample/patient identifier
 (`PatientX_Sample3.fcs`) — every string value in an outgoing event is
 scrubbed for the user's home directory and any path-like token ending in a
-known data-file extension before it leaves the machine. `capture_fatal_error`
-additionally disables Sentry's own local-variable capture at init time
-(`include_local_variables=False`), which is the bigger leak this string
-scrub can't reach: a stack frame's local variables can hold a raw DataFrame
-or file path no message-string regex would ever see.
+known data-file extension before it leaves the machine. `init_crash_reporting`
+additionally passes `include_local_variables=False` at init time, which is
+the bigger leak this string scrub can't reach: a stack frame's local
+variables can hold a raw DataFrame or file path no message-string regex
+would ever see.
 
 Every event carries the core version as Sentry's `release` field, and a
 `plugin_version` tag alongside `plugin_id` whenever the error came from a
 plugin currently resolvable via `set_module_manager` — otherwise a crash
 report only tells you *what* broke, not *which build*.
+
+What is sent in every Sentry event
+-----------------------------------
+- ``message``        – the error message string (file paths stripped)
+- ``traceback``      – formatted stack trace (set as extra context)
+- ``release``        – ``karcytics@<CORE_VERSION>``
+- ``environment``    – ``"production"`` (only frozen builds can send)
+- ``os.name``        – OS platform (set automatically by the Sentry SDK)
+- ``plugin_id``      – Sentry tag, when the error came from a plugin
+- ``plugin_version`` – Sentry tag, when resolvable from ModuleManager
 """
 
 from __future__ import annotations
@@ -27,8 +39,9 @@ from __future__ import annotations
 import logging
 import os
 import re
+import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from karcytics.core.preferences import core_preferences
 
@@ -75,11 +88,20 @@ def _tag_scope(scope: Any, plugin_id: str | None, message: str) -> None:
 
 
 def get_configured_dsn() -> str | None:
-    """Return the Sentry DSN from the environment, or None if unset.
+    """Return the Sentry DSN, or None if unavailable.
 
-    Deliberately not a hardcoded constant — this repo has no Sentry project
-    of its own to send to; a real deployment supplies its own DSN this way.
+    Returns a non-None value only when running as a frozen production build
+    (``sys.frozen`` is True — set by PyInstaller). Source-tree dev runs
+    always return None so crash reports are never sent during development,
+    regardless of any environment variable.
+
+    The DSN is baked into the frozen binary at build time by
+    ``Karcytics.spec`` reading ``KARCYTICS_SENTRY_DSN`` from the CI
+    environment via a runtime hook — it is never hardcoded in this source.
     """
+    if not getattr(sys, "frozen", False):
+        # Never send from development / source-tree runs.
+        return None
     return os.environ.get(_DSN_ENV_VAR) or None
 
 
@@ -137,7 +159,7 @@ def init_crash_reporting() -> bool:
 
     dsn = get_configured_dsn()
     if not dsn:
-        logger.debug("Crash reporting not configured (no %s set).", _DSN_ENV_VAR)
+        logger.debug("Crash reporting not configured (no DSN for this build/environment).")
         return False
 
     if is_consent_given() is not True:
@@ -148,15 +170,23 @@ def init_crash_reporting() -> bool:
 
     from karcytics.core.config import AppConfig
 
+    # Only frozen builds reach here (get_configured_dsn guards this), so
+    # environment is always "production" — captured here explicitly for
+    # clarity in the Sentry dashboard.
+    environment = "production" if getattr(sys, "frozen", False) else "development"
+
     sentry_sdk.init(
         dsn=dsn,
         release=f"karcytics@{AppConfig.CORE_VERSION}",
+        environment=environment,
         send_default_pii=False,
         include_local_variables=False,
+        traces_sample_rate=0.0,
+        max_breadcrumbs=50,
         before_send=_before_send,  # type: ignore[arg-type]
     )
     _initialized = True
-    logger.info("Crash reporting initialized.")
+    logger.info("Crash reporting initialized (environment=%s).", environment)
     return True
 
 
@@ -172,26 +202,43 @@ def shutdown_crash_reporting() -> None:
     _initialized = False
 
 
-def capture_fatal_error(
+def capture_error(
     message: str,
     exception: BaseException | None,
     plugin_id: str | None,
     traceback_str: str | None,
+    level: Literal["fatal", "critical", "error", "warning", "info", "debug"] | None = "error",
 ) -> None:
-    """Report a fatal error to Sentry, if active. A silent no-op otherwise.
+    """Report an error to Sentry, if active. A silent no-op otherwise.
 
-    Prefers `sentry_sdk.capture_exception` when a live exception object is
-    available (the in-process case — gives Sentry a real, parsed
-    stacktrace); falls back to `capture_message` with the pre-formatted
+    Prefers ``sentry_sdk.capture_exception`` when a live exception object
+    is available (the in-process case — gives Sentry a real, parsed
+    stacktrace); falls back to ``capture_message`` with the pre-formatted
     traceback attached as extra context for the remote/isolated-plugin case,
     where only strings ever cross the wire.
+
+    Both fatal and non-fatal errors are routed here — ``DiagnosticEngine``
+    calls this for every reported error when crash reporting is active and
+    consent has been given. All errors are auto-sent; users can see what was
+    sent via the ``ErrorReportDialog`` that appears alongside the report.
+
+    Args:
+        message: Human-readable error description (file paths will be
+            scrubbed by ``_before_send`` before leaving the machine).
+        exception: Live exception object, or None for the string-only path.
+        plugin_id: Plugin identifier to tag the event with, or None for
+            core errors.
+        traceback_str: Pre-formatted traceback string for the no-exception
+            path; ignored when ``exception`` is provided.
+        level: Sentry severity level — ``"fatal"``, ``"error"``,
+            ``"warning"``, etc.  Defaults to ``"error"``.
     """
     if not is_active():
         return
 
     import sentry_sdk
 
-    with sentry_sdk.push_scope() as scope:
+    with sentry_sdk.new_scope() as scope:
         _tag_scope(scope, plugin_id, message)
 
         if exception is not None:
@@ -200,17 +247,33 @@ def capture_fatal_error(
 
         if traceback_str:
             scope.set_extra("traceback", traceback_str)
-        sentry_sdk.capture_message(message, level="fatal")
+        sentry_sdk.capture_message(message, level=level)
+
+
+def capture_fatal_error(
+    message: str,
+    exception: BaseException | None,
+    plugin_id: str | None,
+    traceback_str: str | None,
+) -> None:
+    """Report a fatal error to Sentry.
+
+    Thin wrapper around ``capture_error`` kept for backward compatibility
+    with existing call sites in ``DiagnosticEngine.report_error``.
+    """
+    capture_error(
+        message=message,
+        exception=exception,
+        plugin_id=plugin_id,
+        traceback_str=traceback_str,
+        level="fatal",
+    )
 
 
 def capture_error_data(error_data: dict[str, Any]) -> bool:
-    """Send an already-built `DiagnosticEngine` `error_data` dict to Sentry.
+    """Send an already-built ``DiagnosticEngine`` ``error_data`` dict to Sentry.
 
-    For `ErrorReportDialog`'s explicit "send this report" action: by the
-    time a user opts in from that dialog, the error has already crossed the
-    diagnostics event bus as a plain dict — there's no live exception object
-    left to hand `capture_exception`, only its string form, so this always
-    takes the `capture_message` path `capture_fatal_error` falls back to.
+    Used by ``DiagnosticsSettingsDialog``'s test-event action.
 
     Returns:
         bool: Whether anything was actually sent — False when crash
@@ -221,7 +284,7 @@ def capture_error_data(error_data: dict[str, Any]) -> bool:
 
     import sentry_sdk
 
-    with sentry_sdk.push_scope() as scope:
+    with sentry_sdk.new_scope() as scope:
         plugin_id = error_data.get("plugin_id")
         message = error_data.get("message", "")
         _tag_scope(scope, plugin_id, message)

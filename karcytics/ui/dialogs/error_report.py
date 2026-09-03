@@ -6,7 +6,6 @@ import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -18,6 +17,19 @@ from PyQt6.QtWidgets import (
 from karcytics.core import crash_reporting
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
+# Maps (fatal, has_plugin_id) → (icon, title, subtitle_template)
+# subtitle_template may contain {plugin_id} if has_plugin_id is True.
+_ERROR_APPEARANCE: dict[tuple[bool, bool], tuple[str, str, str]] = {
+    (True, False): (
+        "💥",
+        "Karcytics crashed.",
+        "A fatal error occurred in the core system. The app may be unstable.",
+    ),
+    (True, True): ("💥", "Plugin crashed.", "Plugin {plugin_id} encountered a fatal error."),
+    (False, True): ("⚠️", "Plugin error.", "Plugin {plugin_id} reported a non-fatal error."),
+    (False, False): ("⚠️", "Something went wrong.", "The core system reported an unexpected error."),
+}
+
 
 class ErrorReportDialog(QDialog):
     """A sleek, theme-aware dialog for displaying system errors and tracebacks."""
@@ -26,7 +38,7 @@ class ErrorReportDialog(QDialog):
         super().__init__(parent)
         self.error_data = error_data
         self.setWindowTitle("System Alert — Karcytics Diagnostic")
-        self.setMinimumSize(600, 450)
+        self.setMinimumSize(620, 460)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
 
         self._setup_ui()
@@ -37,20 +49,26 @@ class ErrorReportDialog(QDialog):
         theme_manager.theme_changed.connect(self._apply_styles)
 
     def _setup_ui(self):
+        fatal: bool = bool(self.error_data.get("fatal"))
+        plugin_id: str | None = self.error_data.get("plugin_id")
+        icon_str, title_str, subtitle_str = _ERROR_APPEARANCE[(fatal, plugin_id is not None)]
+        if plugin_id:
+            subtitle_str = subtitle_str.format(plugin_id=plugin_id)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
         # Header
         header_layout = QHBoxLayout()
-        self.icon_label = QLabel("⚠️")
+        self.icon_label = QLabel(icon_str)
         self.icon_label.setFont(QFont("Segoe UI Emoji", 32))
 
         title_v_layout = QVBoxLayout()
-        self.title_label = QLabel("Something went wrong.")
+        self.title_label = QLabel(title_str)
         self.title_label.setFont(Fonts.H2)
 
-        self.subtitle_label = QLabel(f"Source: {self.error_data.get('plugin_id', 'Core System')}")
+        self.subtitle_label = QLabel(subtitle_str)
         self.subtitle_label.setFont(Fonts.CAPTION)
 
         title_v_layout.addWidget(self.title_label)
@@ -77,34 +95,30 @@ class ErrorReportDialog(QDialog):
         self.details_area.setMinimumHeight(150)
         layout.addWidget(self.details_area)
 
-        # Crash reporting — hidden entirely when no DSN is configured, since
-        # there's nothing to send to either way.
-        self.send_report_btn = None
-        self.consent_checkbox = None
+        # Crash reporting status — only shown when a DSN is configured.
+        # Since all errors are now auto-sent when consent is given, this
+        # section is purely informational (no "send" button needed).
+        self.reporting_status_label = None
         if crash_reporting.get_configured_dsn() is not None:
-            already_auto_sent = bool(self.error_data.get("fatal")) and (
-                crash_reporting.is_consent_given() is True
-            )
+            reporting_layout = QHBoxLayout()
 
-            consent_layout = QHBoxLayout()
-            self.consent_checkbox = QCheckBox("Automatically send future crash reports")
-            self.consent_checkbox.setChecked(crash_reporting.is_consent_given() is True)
-            self.consent_checkbox.toggled.connect(crash_reporting.set_consent)
-            consent_layout.addWidget(self.consent_checkbox)
+            if crash_reporting.is_active():
+                status_text = "✓ Report sent automatically to help fix this issue."
+            elif crash_reporting.is_consent_given() is False:
+                status_text = (
+                    "Crash reporting is disabled. Enable it in Diagnostics & Privacy settings."
+                )
+            else:
+                status_text = (
+                    "Enable crash reporting in Diagnostics & Privacy settings to share this report."
+                )
 
-            self.send_report_btn = QPushButton(
-                "Report Sent Automatically" if already_auto_sent else "Send This Report"
-            )
-            self.send_report_btn.setEnabled(not already_auto_sent)
-            self.send_report_btn.setToolTip(
-                "Sends this error's message and stack trace — file paths are "
-                "stripped before anything leaves this machine."
-            )
-            if not already_auto_sent:
-                self.send_report_btn.clicked.connect(self._send_report)
-            consent_layout.addWidget(self.send_report_btn)
-            consent_layout.addStretch()
-            layout.addLayout(consent_layout)
+            self.reporting_status_label = QLabel(status_text)
+            self.reporting_status_label.setFont(Fonts.CAPTION)
+            self.reporting_status_label.setWordWrap(True)
+            reporting_layout.addWidget(self.reporting_status_label)
+            reporting_layout.addStretch()
+            layout.addLayout(reporting_layout)
 
         # Actions
         btn_layout = QHBoxLayout()
@@ -135,11 +149,19 @@ class ErrorReportDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def _apply_styles(self):
-        theme_manager.apply_style(self.title_label, f"color: {Colors.ACCENT_DANGER};")
+        is_fatal = bool(self.error_data.get("fatal"))
+        title_color = Colors.ACCENT_DANGER if is_fatal else Colors.FG_PRIMARY
+        theme_manager.apply_style(self.title_label, f"color: {title_color};")
         theme_manager.apply_style(self.subtitle_label, f"color: {Colors.FG_SECONDARY};")
         theme_manager.apply_style(
             self.contact_label, f"color: {Colors.FG_SECONDARY}; margin-right: 10px;"
         )
+        if self.reporting_status_label is not None:
+            is_sent = crash_reporting.is_active()
+            status_color = Colors.ACCENT_SUCCESS if is_sent else Colors.FG_SECONDARY
+            theme_manager.apply_style(
+                self.reporting_status_label, f"color: {status_color}; font-style: italic;"
+            )
 
         theme_manager.apply_style(
             self,
@@ -171,22 +193,6 @@ class ErrorReportDialog(QDialog):
             }}
         """,
         )
-
-    def _send_report(self):
-        """Send this specific report now.
-
-        Sending requires consent (`capture_error_data` no-ops without it),
-        so this grants it first if the checkbox isn't already checked —
-        clicking "Send This Report" is itself an explicit, informed opt-in,
-        disclosed by the button's own tooltip.
-        """
-        if self.consent_checkbox is not None and not self.consent_checkbox.isChecked():
-            self.consent_checkbox.setChecked(True)  # triggers set_consent(True) via toggled
-
-        crash_reporting.capture_error_data(self.error_data)
-        assert self.send_report_btn is not None  # only connected when this button exists
-        self.send_report_btn.setText("Report Sent — Thank You")
-        self.send_report_btn.setEnabled(False)
 
     def _copy_details(self):
         from PyQt6.QtWidgets import QApplication
@@ -228,8 +234,13 @@ class ErrorReportDialog(QDialog):
         if not file_path:
             return
 
+        # Scrub file paths from the locally exported pack — the same
+        # _before_send hook strips them from Sentry events, but a locally
+        # saved file bypasses that hook entirely.
+        scrubbed_error = crash_reporting._scrub_value(self.error_data)
+
         pack = {
-            "error_report": self.error_data,
+            "error_report": scrubbed_error,
             "system_specs": {
                 "os": platform.system(),
                 "os_release": platform.release(),

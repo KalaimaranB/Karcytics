@@ -202,6 +202,20 @@ class DiagnosticEngine:
         else:
             logger.error(log_msg, extra={"plugin_id": plugin_id})
 
+            # Non-fatal errors are also auto-sent to Sentry when crash
+            # reporting is active and consent has been given. The
+            # ErrorReportDialog shown to the user displays what was sent
+            # (unlike the fatal path, where we can't reliably show UI).
+            from karcytics.core.crash_reporting import capture_error
+
+            capture_error(
+                message=message,
+                exception=exception,
+                plugin_id=plugin_id,
+                traceback_str=tb,
+                level="error",
+            )
+
         # Broadcast to UI
         event_bus.emit(KarcyticsEvent.ERROR_OCCURRED, error_data)
 
