@@ -1,7 +1,7 @@
 import logging  # noqa: D100
 import sys
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 
 # --- STABILIZATION: Bootstrap Logging ---
@@ -693,6 +693,34 @@ def main():
     _start_application(log_file)
 
 
+def _on_error_event(error_data: Any) -> None:
+    # CRITICAL: We cannot show a QDialog if QApplication hasn't been created.
+    # If it's a fatal error, we'll let the global exception handler in main() catch it
+    # and show a native message box there.
+    from PyQt6.QtWidgets import QApplication
+
+    if not QApplication.instance():
+        return
+
+    if isinstance(error_data, dict) and "title" in error_data and "message" in error_data:
+        from karcytics.core.event_bus import ErrorEventPayload
+        from karcytics.shared.ui.alerts import show_error
+
+        # Narrow the type for strict Mypy compatibility
+        typed_error: ErrorEventPayload = error_data  # type: ignore[assignment]
+        show_error(
+            QApplication.activeWindow(),
+            typed_error["title"],
+            typed_error["message"],
+        )
+        return
+
+    from karcytics.ui.dialogs.error_report import ErrorReportDialog
+
+    dialog = ErrorReportDialog(error_data)
+    dialog.exec()
+
+
 def _start_application(log_file: Path) -> None:
 
     try:
@@ -720,7 +748,6 @@ def _start_application(log_file: Path) -> None:
         from karcytics.core.preferences import core_preferences
 
         # Initialize global ToastManager for warnings
-        from karcytics.ui.dialogs.error_report import ErrorReportDialog
         from karcytics.ui.theme import theme_manager
 
         saved_theme = core_preferences.get("theme")
@@ -729,41 +756,33 @@ def _start_application(log_file: Path) -> None:
             if theme_path.exists():
                 theme_manager.load_theme(theme_path)
 
-        # No-ops unless both a DSN is configured (KARCYTICS_SENTRY_DSN) and
-        # the user has already opted in — see crash_reporting.py.
+        # No-ops unless both a DSN is configured and the user has opted in —
+        # see crash_reporting.py. Developer-mode Sentry testing is available
+        # via Help → Diagnostics & Privacy → Developer Tools (dev builds only).
+        from karcytics.core import crash_reporting
         from karcytics.core.crash_reporting import init_crash_reporting, set_module_manager
 
         set_module_manager(module_manager)
         init_crash_reporting()
 
-        from typing import Any
+        # Show the first-run consent dialog once if the user hasn't made a
+        # choice yet and this is a production build with a DSN configured.
+        # The 800 ms delay lets the main window appear first so the dialog
+        # doesn't flash before the UI is ready.
+        from PyQt6.QtCore import QTimer
 
-        def on_error(error_data: Any) -> None:
-            # CRITICAL: We cannot show a QDialog if QApplication hasn't been created.
-            # If it's a fatal error, we'll let the global exception handler in main() catch it
-            # and show a native message box there.
-            from PyQt6.QtWidgets import QApplication
+        if crash_reporting.get_configured_dsn() and crash_reporting.is_consent_given() is None:
 
-            if not QApplication.instance():
-                return
-
-            if isinstance(error_data, dict) and "title" in error_data and "message" in error_data:
-                from karcytics.core.event_bus import ErrorEventPayload
-                from karcytics.shared.ui.alerts import show_error
-
-                # Narrow the type for strict Mypy compatibility
-                typed_error: ErrorEventPayload = error_data  # type: ignore[assignment]
-                show_error(
-                    QApplication.activeWindow(),
-                    typed_error["title"],
-                    typed_error["message"],
+            def _show_consent_dialog() -> None:
+                from karcytics.ui.dialogs.crash_reporting_consent_dialog import (
+                    CrashReportingConsentDialog,
                 )
-                return
 
-            dialog = ErrorReportDialog(error_data)
-            dialog.exec()
+                CrashReportingConsentDialog().exec()
 
-        event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, on_error)
+            QTimer.singleShot(800, _show_consent_dialog)
+
+        event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, _on_error_event)
         install_exception_hook()
 
         app = KarcyticsApp(module_manager, updater, core_services_server=core_services_server)

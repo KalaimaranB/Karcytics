@@ -44,13 +44,21 @@ class TestConsent:
 
 
 class TestGetConfiguredDsn:
-    def test_returns_none_when_unset(self, monkeypatch):
-        monkeypatch.delenv("KARCYTICS_SENTRY_DSN", raising=False)
+    def test_returns_none_when_not_frozen_regardless_of_env(self, monkeypatch):
+        """Source-tree runs must never return a DSN, even if the env var is set."""
+        monkeypatch.setenv("KARCYTICS_SENTRY_DSN", "https://example.invalid/1")
+        # sys.frozen is not set in test runs — get_configured_dsn must return None.
         assert crash_reporting.get_configured_dsn() is None
 
-    def test_returns_env_value_when_set(self, monkeypatch):
+    def test_returns_env_value_when_frozen(self, monkeypatch):
         monkeypatch.setenv("KARCYTICS_SENTRY_DSN", "https://example.invalid/1")
+        monkeypatch.setattr(crash_reporting.sys, "frozen", True, raising=False)
         assert crash_reporting.get_configured_dsn() == "https://example.invalid/1"
+
+    def test_returns_none_when_frozen_but_env_unset(self, monkeypatch):
+        monkeypatch.delenv("KARCYTICS_SENTRY_DSN", raising=False)
+        monkeypatch.setattr(crash_reporting.sys, "frozen", True, raising=False)
+        assert crash_reporting.get_configured_dsn() is None
 
 
 class TestInitCrashReporting:
@@ -86,6 +94,9 @@ class TestInitCrashReporting:
         assert kwargs["send_default_pii"] is False
         assert kwargs["include_local_variables"] is False
         assert kwargs["release"].startswith("karcytics@")
+        assert kwargs["traces_sample_rate"] == 0.0
+        assert kwargs["max_breadcrumbs"] == 50
+        assert "environment" in kwargs
 
     def test_set_consent_true_triggers_init_when_dsn_configured(self, monkeypatch):
         monkeypatch.setattr(
@@ -186,25 +197,53 @@ class TestPluginVersion:
         assert crash_reporting._plugin_version("flow_cytometry") == "2.0.0"
 
 
-class TestCaptureFatalError:
+class TestCaptureError:
+    """Tests for the unified capture_error() function (and its capture_fatal_error wrapper)."""
+
     def test_noop_when_not_active(self):
         # is_active() is False by default in this isolated fixture — must
         # not raise or try to import sentry_sdk at all.
-        crash_reporting.capture_fatal_error("boom", None, None, None)
+        crash_reporting.capture_error("boom", None, None, None)
 
     def test_captures_live_exception_when_available(self, monkeypatch):
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
-        mock_sentry.push_scope.return_value.__enter__.return_value = mock_scope
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
 
         exc = ValueError("nope")
         with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
-            crash_reporting.capture_fatal_error("bad transform", exc, "flow_cytometry", None)
+            crash_reporting.capture_error("bad transform", exc, "flow_cytometry", None)
 
         mock_scope.set_tag.assert_called_once_with("plugin_id", "flow_cytometry")
         mock_sentry.capture_exception.assert_called_once_with(exc)
         mock_sentry.capture_message.assert_not_called()
+
+    def test_uses_provided_level_for_message_capture(self, monkeypatch):
+        monkeypatch.setattr(crash_reporting, "_initialized", True)
+        mock_sentry = MagicMock()
+        mock_scope = MagicMock()
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
+
+        with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
+            crash_reporting.capture_error("info msg", None, None, None, level="warning")
+
+        mock_sentry.capture_message.assert_called_once_with("info msg", level="warning")
+
+    def test_capture_fatal_error_delegates_with_fatal_level(self, monkeypatch):
+        monkeypatch.setattr(crash_reporting, "_initialized", True)
+        mock_sentry = MagicMock()
+        mock_scope = MagicMock()
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
+
+        with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
+            crash_reporting.capture_fatal_error(
+                "remote failure", None, "flow_cytometry", "Traceback..."
+            )
+
+        mock_scope.set_extra.assert_called_once_with("traceback", "Traceback...")
+        mock_sentry.capture_message.assert_called_once_with("remote failure", level="fatal")
+        mock_sentry.capture_exception.assert_not_called()
 
     def test_tags_plugin_version_when_resolvable(self, monkeypatch):
         monkeypatch.setattr(crash_reporting, "_initialized", True)
@@ -213,32 +252,26 @@ class TestCaptureFatalError:
         monkeypatch.setattr(crash_reporting, "_module_manager", mock_manager)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
-        mock_sentry.push_scope.return_value.__enter__.return_value = mock_scope
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
 
         with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
-            crash_reporting.capture_fatal_error(
+            crash_reporting.capture_error(
                 "bad transform", ValueError("nope"), "flow_cytometry", None
             )
 
         mock_scope.set_tag.assert_any_call("plugin_id", "flow_cytometry")
         mock_scope.set_tag.assert_any_call("plugin_version", "1.4.0")
 
-    def test_captures_message_with_traceback_extra_when_no_live_exception(self, monkeypatch):
+    def test_capture_error_nonfatal_uses_error_level_by_default(self, monkeypatch):
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
-        mock_sentry.push_scope.return_value.__enter__.return_value = mock_scope
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
 
         with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
-            crash_reporting.capture_fatal_error(
-                "remote failure", None, "flow_cytometry", "Traceback (most recent call last):\n..."
-            )
+            crash_reporting.capture_error("bad transform", None, None, "tb...", level="error")
 
-        mock_scope.set_extra.assert_called_once_with(
-            "traceback", "Traceback (most recent call last):\n..."
-        )
-        mock_sentry.capture_message.assert_called_once_with("remote failure", level="fatal")
-        mock_sentry.capture_exception.assert_not_called()
+        mock_sentry.capture_message.assert_called_once_with("bad transform", level="error")
 
 
 class TestCaptureErrorData:
@@ -250,7 +283,7 @@ class TestCaptureErrorData:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
-        mock_sentry.push_scope.return_value.__enter__.return_value = mock_scope
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
 
         error_data = {
             "message": "bad transform",
@@ -272,7 +305,7 @@ class TestCaptureErrorData:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
-        mock_sentry.push_scope.return_value.__enter__.return_value = mock_scope
+        mock_sentry.new_scope.return_value.__enter__.return_value = mock_scope
 
         with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
             crash_reporting.capture_error_data({"message": "core-only failure"})
