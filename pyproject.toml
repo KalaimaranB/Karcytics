@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Karcytics"
-version = "2.0.1"
+version = "2.0.2"
 description = "High-performance molecular data processing and analysis tool — Open Source, Free and Accessible to all."
 readme = "README.md"
 license = "MIT"
