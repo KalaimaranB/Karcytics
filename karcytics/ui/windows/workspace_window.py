@@ -98,6 +98,9 @@ class WorkspaceWindow(QMainWindow):
         self._connect_signals()
         event_bus.subscribe(KarcyticsEvent.PLUGIN_INSTALLED, lambda _: self.refresh_ui())
         event_bus.subscribe(KarcyticsEvent.PLUGIN_REMOVED, lambda _: self.refresh_ui())
+        event_bus.subscribe(
+            KarcyticsEvent.WORKFLOW_SAVED, lambda _: self.hub_manager.refresh_hub_workflows()
+        )
         self.home_screen.populate_modules(self.module_manager.get_available_modules())
         self.hub_manager.refresh_hub_workflows()
         self._ai_window = None
@@ -157,6 +160,16 @@ class WorkspaceWindow(QMainWindow):
             global_tutorial_manager, hub_academy_event_bus, self.home_screen
         )
         self.home_tutorial_overlay.hide()
+
+        from karcytics.ui.windows.workspace.core_completion_overlay import CoreCourseCompleteOverlay
+
+        self.tutorial_overlay.custom_completion_factories["core_intro_v1"] = (
+            CoreCourseCompleteOverlay
+        )
+        self.home_tutorial_overlay.custom_completion_factories["core_intro_v1"] = (
+            CoreCourseCompleteOverlay
+        )
+
         self.tutorial_overlay.btn_next.clicked.connect(self._on_tutorial_next)
         self.tutorial_overlay.skip_requested.connect(self._on_tutorial_skip)
         self.home_tutorial_overlay.btn_next.clicked.connect(self._on_tutorial_next)
@@ -330,7 +343,11 @@ class WorkspaceWindow(QMainWindow):
         from PyQt6.QtWidgets import QDialog
 
         store = self.findChild(QDialog, "PluginStoreDialog")
-        if store and store.isVisible():
+        prefs = self.findChild(QDialog, "preferences_dialog")
+
+        if prefs and prefs.isVisible():
+            parent_page = prefs
+        elif store and store.isVisible():
             parent_page = store
         elif getattr(self, "root_stack", None) and self.root_stack.currentIndex() == getattr(
             self, "_PAGE_HOME", 0
@@ -338,6 +355,12 @@ class WorkspaceWindow(QMainWindow):
             parent_page = self.home_screen
         else:
             parent_page = self.analysis_page
+
+        if active_overlay.parent() != parent_page:
+            active_overlay.setParent(parent_page)
+            active_overlay.show()
+            active_overlay.raise_()
+
         new_geom = parent_page.rect()
         if active_overlay.geometry() != new_geom:
             active_overlay.setGeometry(new_geom)

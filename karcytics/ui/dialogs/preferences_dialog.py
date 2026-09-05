@@ -1,5 +1,7 @@
 """Unified Preferences Dialog."""
 
+import typing
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -23,6 +25,7 @@ class ThemeSettingsWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("theme_settings_widget")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
@@ -85,7 +88,58 @@ class ThemeSettingsWidget(QWidget):
         if checked:
             from pathlib import Path
 
+            from karcytics.core.preferences import core_preferences
+
             theme_manager.load_theme(Path(path))
+            core_preferences.set("theme", str(path))
+
+
+class AboutSettingsWidget(QWidget):
+    """Widget displaying combined About Karcytics and About Developer information."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        from karcytics.core.about_info import DEVELOPER_ABOUT, KARCYTICS_ABOUT
+
+        # Karcytics About
+        app_title = QLabel(KARCYTICS_ABOUT["name"])
+        app_title.setFont(Fonts.H2)
+        layout.addWidget(app_title)
+
+        app_desc = QLabel(
+            f"<p><b>{KARCYTICS_ABOUT['tagline']}</b></p><p>{KARCYTICS_ABOUT['description']}</p>"
+        )
+        app_desc.setWordWrap(True)
+        app_desc.setFont(Fonts.BODY)
+        layout.addWidget(app_desc)
+
+        layout.addSpacing(16)
+
+        # Developer About
+        dev_title = QLabel(f"About the Developer: {DEVELOPER_ABOUT['name']}")
+        dev_title.setFont(Fonts.H3 if hasattr(Fonts, "H3") else Fonts.H2)
+        layout.addWidget(dev_title)
+
+        bio_text = "".join(f"<p>{p}</p>" for p in DEVELOPER_ABOUT["bio"].split("\n\n"))
+        dev_desc = QLabel(bio_text)
+        dev_desc.setWordWrap(True)
+        dev_desc.setFont(Fonts.BODY)
+        layout.addWidget(dev_desc)
+
+        layout.addStretch()
+
+        self._apply_styles()
+        theme_manager.theme_changed.connect(self._apply_styles)
+
+    def _apply_styles(self):
+        from PyQt6.QtWidgets import QLabel
+
+        for label in self.findChildren(QLabel):
+            theme_manager.apply_style(label, f"color: {Colors.FG_PRIMARY};")
 
 
 class AdvancedSettingsWidget(QWidget):
@@ -278,6 +332,7 @@ class PreferencesDialog(QDialog):
 
     def __init__(self, parent=None, hub_manager=None, workspace_window=None):
         super().__init__(parent)
+        self.setObjectName("preferences_dialog")
         self.setWindowTitle("Preferences")
         self.setMinimumSize(700, 500)
 
@@ -288,6 +343,20 @@ class PreferencesDialog(QDialog):
         self._apply_styles()
         theme_manager.theme_changed.connect(self._apply_styles)
 
+    @typing.override
+    def showEvent(self, event):
+        from karcytics.core.event_bus import KarcyticsEvent, event_bus
+
+        super().showEvent(event)
+        event_bus.emit(KarcyticsEvent.PREFERENCES_OPENED)
+
+    @typing.override
+    def closeEvent(self, event):
+        from karcytics.core.event_bus import KarcyticsEvent, event_bus
+
+        super().closeEvent(event)
+        event_bus.emit(KarcyticsEvent.PREFERENCES_CLOSED)
+
     def _setup_ui(self):
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -295,6 +364,7 @@ class PreferencesDialog(QDialog):
 
         # Left panel: Navigation list
         self.nav_list = QListWidget()
+        self.nav_list.setObjectName("nav_list")
         self.nav_list.setFixedWidth(200)
         self.nav_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         main_layout.addWidget(self.nav_list)
@@ -314,14 +384,14 @@ class PreferencesDialog(QDialog):
         btn_layout.addStretch()
         self.close_btn = QPushButton("Close")
         self.close_btn.setMinimumWidth(80)
-        self.close_btn.clicked.connect(self.accept)
+        self.close_btn.clicked.connect(self.close)
         btn_layout.addWidget(self.close_btn)
         right_layout.addLayout(btn_layout)
 
         main_layout.addWidget(right_container, stretch=1)
 
         # Add pages
-
+        self._add_page("About", AboutSettingsWidget(self))
         self._add_page("Appearance", ThemeSettingsWidget(self))
         self._add_page("Privacy & Diagnostics", DiagnosticsSettingsWidget(self))
         self._add_page(

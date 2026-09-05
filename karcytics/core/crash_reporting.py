@@ -295,3 +295,66 @@ def capture_error_data(error_data: dict[str, Any]) -> bool:
         sentry_sdk.capture_message(message, level="error")
 
     return True
+
+
+def send_user_report(error_data: dict[str, Any], user_comments: str) -> bool:
+    """Send a user-initiated crash report directly to Sentry.
+
+    This function uses an isolated Sentry Client to bypass global telemetry
+    consent and ensure it functions in both development and production mode.
+    """
+    import sentry_sdk
+
+    from karcytics.core.config import AppConfig
+
+    # Use environment DSN, fallback to the hardcoded DSN if missing
+    dsn = (
+        os.environ.get(_DSN_ENV_VAR)
+        or "https://c78fe72a27e7b99f9a8be1f6b14d6822@o4511854609629184.ingest.us.sentry.io/4511854612578304"
+    )
+
+    environment = "production" if getattr(sys, "frozen", False) else "development"
+
+    try:
+        client = sentry_sdk.Client(
+            dsn=dsn,
+            release=f"karcytics@{AppConfig.CORE_VERSION}",
+            environment=environment,
+            send_default_pii=False,
+            include_local_variables=False,
+        )
+
+        event: dict[str, Any] = {}
+        message = error_data.get("message", "Crash Report")
+        event["message"] = message
+        event["level"] = "fatal" if error_data.get("fatal") else "error"
+
+        tags = {}
+        plugin_id = error_data.get("plugin_id")
+        if plugin_id:
+            tags["plugin_id"] = plugin_id
+            plugin_version = _plugin_version(plugin_id)
+            if plugin_version:
+                tags["plugin_version"] = plugin_version
+        if tags:
+            event["tags"] = tags
+
+        extra = {}
+        traceback_str = error_data.get("traceback")
+        if traceback_str:
+            extra["traceback"] = traceback_str
+        if user_comments:
+            extra["user_comments"] = user_comments
+
+        if extra:
+            event["extra"] = extra
+
+        # Scrub the event data before sending to ensure no PII / home directories leak
+        event = _scrub_value(event)
+
+        client.capture_event(event)  # type: ignore[arg-type]
+        client.flush(timeout=5.0)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send user report to Sentry: {e}")
+        return False

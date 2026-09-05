@@ -1322,6 +1322,7 @@ class PluginStoreDialog(QDialog):
         event_bus.emit(KarcyticsEvent.STORE_MODULE_DETAILS_OPENED)
         dialog = PluginDetailsDialog(plugin_id, data, self, self.module_manager)
         dialog.exec()
+        event_bus.emit(KarcyticsEvent.STORE_MODULE_DETAILS_CLOSED)
 
     def _create_developer_card(self, dev: dict):
         """
