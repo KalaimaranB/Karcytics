@@ -49,6 +49,37 @@ def test_error_reporting(qtbot):
     assert len(data["history"]) > 0
 
 
+def test_error_reporting_with_remote_exception_and_traceback(qtbot):
+    """An isolated plugin has no live exception object to hand over — its
+    error crosses an RPC/event boundary as already-formatted strings (see
+    core_services_bootstrap.py's diagnostics.report_error handler and
+    plugins/loader.py's diagnostics_error event forwarding). Both must
+    survive into the broadcast error_data exactly like the live-exception
+    path does.
+    """
+    engine = DiagnosticEngine()
+
+    received_data = []
+    event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, received_data.append)
+
+    try:
+        engine.report_error(
+            "Remote failure message",
+            plugin_id="flow_cytometry",
+            exception_repr="ValueError: nope",
+            traceback_str="Traceback (most recent call last):\n...",
+        )
+
+        assert len(received_data) == 1
+        data = received_data[0]
+        assert data["message"] == "Remote failure message"
+        assert data["exception"] == "ValueError: nope"
+        assert data["traceback"] == "Traceback (most recent call last):\n..."
+        assert data["plugin_id"] == "flow_cytometry"
+    finally:
+        event_bus.unsubscribe(KarcyticsEvent.ERROR_OCCURRED, received_data.append)
+
+
 from typing import Any, Final
 
 _LISTENER_FAILURE_WAIT_MS: Final[int] = 50

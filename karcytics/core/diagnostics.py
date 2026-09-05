@@ -139,16 +139,27 @@ class DiagnosticEngine:
 
         self._initialized = True
 
-    def report_error(
+    def report_error(  # noqa: PLR0913
         self,
         message: str,
         exception: BaseException | None = None,
         plugin_id: str | None = None,
         fatal: bool = False,
+        exception_repr: str | None = None,
+        traceback_str: str | None = None,
     ) -> None:
         """Report an error to the system.
 
         This will log the error and broadcast it via the Event Bus for UI display.
+
+        `exception_repr`/`traceback_str` are for a caller with no live
+        exception object to hand over — an isolated plugin process, whose
+        error crosses an RPC/event boundary as an already-formatted string
+        (see `core_services_bootstrap.py`'s `diagnostics.report_error`
+        handler and `plugins/loader.py`'s `diagnostics_error` event
+        forwarding). `exception`/`traceback.format_exc()` still win when a
+        real exception is passed — this is only the fallback for the case
+        `sys.exc_info()` in *this* process has nothing to offer.
         """
         import time
 
@@ -162,11 +173,11 @@ class DiagnosticEngine:
         self._last_error_sig = error_sig
         self._last_error_time = now
 
-        tb = traceback.format_exc() if exception else None
+        tb = traceback.format_exc() if exception else traceback_str
 
         error_data = {
             "message": message,
-            "exception": str(exception) if exception else None,
+            "exception": str(exception) if exception else exception_repr,
             "traceback": tb,
             "plugin_id": plugin_id,
             "fatal": fatal,
@@ -182,8 +193,28 @@ class DiagnosticEngine:
 
         if fatal:
             logger.critical(log_msg, extra={"plugin_id": plugin_id})
+
+            from karcytics.core.crash_reporting import capture_fatal_error
+
+            capture_fatal_error(
+                message=message, exception=exception, plugin_id=plugin_id, traceback_str=tb
+            )
         else:
             logger.error(log_msg, extra={"plugin_id": plugin_id})
+
+            # Non-fatal errors are also auto-sent to Sentry when crash
+            # reporting is active and consent has been given. The
+            # ErrorReportDialog shown to the user displays what was sent
+            # (unlike the fatal path, where we can't reliably show UI).
+            from karcytics.core.crash_reporting import capture_error
+
+            capture_error(
+                message=message,
+                exception=exception,
+                plugin_id=plugin_id,
+                traceback_str=tb,
+                level="error",
+            )
 
         # Broadcast to UI
         event_bus.emit(KarcyticsEvent.ERROR_OCCURRED, error_data)

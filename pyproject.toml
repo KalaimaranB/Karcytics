@@ -44,6 +44,7 @@ dependencies = [
     "tifffile",
     "certifi",
     "pyobjc-framework-cocoa>=12.2.1 ; sys_platform == 'darwin'",
+    "sentry-sdk>=2.68.0",
 ]
 
 [project.optional-dependencies]
@@ -141,7 +142,9 @@ module = [
     "umap.*",
     "seaborn.*",
     "requests.*",
-    "requests"
+    "requests",
+    "sentry_sdk.*",
+    "sentry_sdk"
 ]
 ignore_missing_imports = true
 

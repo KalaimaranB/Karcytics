@@ -111,7 +111,43 @@ def test_diagnostics_report_error_handler_forwards_to_diagnostic_engine():
 
     assert result == {"status": "ok"}
     mock_diagnostics.report_error.assert_called_once_with(
-        message="boom", plugin_id="flow_cytometry", fatal=True
+        message="boom",
+        plugin_id="flow_cytometry",
+        fatal=True,
+        exception_repr=None,
+        traceback_str=None,
+    )
+
+
+def test_diagnostics_report_error_handler_forwards_remote_exception_and_traceback():
+    """The RPC path (used by ui_daemon_runtime.py's theme-gate failure and any
+    future remote caller) has no live exception object to hand over — only
+    already-formatted strings, which must reach DiagnosticEngine.report_error
+    via its exception_repr/traceback_str parameters, not get dropped.
+    """
+    mock_diagnostics = MagicMock()
+    with patch("karcytics.core.diagnostics.diagnostics", mock_diagnostics):
+        server = start_core_services()
+        try:
+            client = CoreServicesClient(server.port, token=server.token)
+            result = client.call(
+                "diagnostics.report_error",
+                message="boom",
+                plugin_id="flow_cytometry",
+                fatal=True,
+                exception="ValueError: nope",
+                traceback="Traceback (most recent call last):\n...",
+            )
+        finally:
+            server.stop()
+
+    assert result == {"status": "ok"}
+    mock_diagnostics.report_error.assert_called_once_with(
+        message="boom",
+        plugin_id="flow_cytometry",
+        fatal=True,
+        exception_repr="ValueError: nope",
+        traceback_str="Traceback (most recent call last):\n...",
     )
 
 

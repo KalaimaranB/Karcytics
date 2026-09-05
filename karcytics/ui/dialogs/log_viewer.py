@@ -1,8 +1,11 @@
 """Simple text window for viewing application logs."""
 
+from pathlib import Path
+
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QPushButton,
@@ -15,7 +18,7 @@ from karcytics.ui.theme import Colors, Fonts, theme_manager
 
 
 class LogViewerDialog(QDialog):
-    """A dialog to display the contents of the current karcytics.log file."""
+    """A dialog to browse the core, IPC, and per-plugin log files."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -24,6 +27,7 @@ class LogViewerDialog(QDialog):
 
         self._setup_ui()
         self._apply_styles()
+        self._populate_sources()
         self._load_logs()
 
         from karcytics.ui.theme import theme_manager
@@ -34,6 +38,10 @@ class LogViewerDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
+
+        self.source_selector = QComboBox()
+        self.source_selector.currentIndexChanged.connect(self._load_logs)
+        layout.addWidget(self.source_selector)
 
         self.text_area = QTextEdit()
         self.text_area.setReadOnly(True)
@@ -47,7 +55,7 @@ class LogViewerDialog(QDialog):
         self.copy_btn.clicked.connect(self._copy_logs)
 
         self.refresh_btn = QPushButton("Refresh")
-        self.refresh_btn.clicked.connect(self._load_logs)
+        self.refresh_btn.clicked.connect(self._refresh)
 
         self.close_btn = QPushButton("Close")
         self.close_btn.clicked.connect(self.accept)
@@ -85,12 +93,45 @@ class LogViewerDialog(QDialog):
                 background-color: {Colors.BG_MEDIUM};
                 border: 1px solid {Colors.ACCENT_PRIMARY};
             }}
+            QComboBox {{
+                background-color: {Colors.BG_DARK};
+                color: {Colors.FG_PRIMARY};
+                border: 1px solid {Colors.BORDER};
+                padding: 6px 10px;
+                border-radius: 4px;
+            }}
         """,
         )
 
+    def _logs_dir(self) -> Path:
+        return AppConfig.APP_DATA_DIR / "logs"
+
+    def _populate_sources(self):
+        logs_dir = self._logs_dir()
+        self.source_selector.blockSignals(True)
+        self.source_selector.clear()
+        self.source_selector.addItem("Core", logs_dir / "core.log")
+        self.source_selector.addItem("Plugin Communication (IPC)", logs_dir / "ipc.log")
+        plugins_dir = logs_dir / "plugins"
+        if plugins_dir.is_dir():
+            for log_file in sorted(plugins_dir.glob("*.log")):
+                self.source_selector.addItem(f"Plugin: {log_file.stem}", log_file)
+        self.source_selector.blockSignals(False)
+
+    def _refresh(self):
+        current_path = self.source_selector.currentData()
+        self._populate_sources()
+        if current_path is not None:
+            idx = self.source_selector.findData(current_path)
+            if idx >= 0:
+                self.source_selector.setCurrentIndex(idx)
+        self._load_logs()
+
     def _load_logs(self):
-        log_file = AppConfig.APP_DATA_DIR / "karcytics.log"
-        if log_file.exists():
+        log_file = self.source_selector.currentData()
+        if log_file is None:
+            self.text_area.setPlainText("No log source selected.")
+        elif log_file.exists():
             try:
                 with open(log_file, encoding="utf-8") as f:
                     content = f.read()
@@ -101,7 +142,7 @@ class LogViewerDialog(QDialog):
             except Exception as e:
                 self.text_area.setPlainText(f"Error reading log file:\n{e}")
         else:
-            self.text_area.setPlainText("Log file not found at ~/.karcytics/karcytics.log")
+            self.text_area.setPlainText(f"Log file not found at {log_file}")
         self.copy_btn.setText("Copy to Clipboard")
 
     def _copy_logs(self):

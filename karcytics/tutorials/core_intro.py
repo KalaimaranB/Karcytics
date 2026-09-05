@@ -25,14 +25,13 @@ Journey:
   ├── 13. Module cards & recent sessions, dashboard layout
   └── 14. [WaitForEvent: MODULE_OPENED] — user opens the module (spotlight the Flow Cytometry card)
 
-  Analysis Panel (Flow Cytometry)
-  ├── 15. You're in the module! Overview
-  ├── 16. Toolbar
-  ├── 17. File safety: hashing & reproducibility
-  ├── 18. Download the demo FCS file (auto-placed in Downloads)
-  ├── 19. [WaitForEvent: FILE_IMPORTED] — user imports the demo file
-  ├── 20. Workflows explained — save your work
-  └── 21. [WaitForEvent: WORKFLOW_SAVED] — user saves a workflow
+  Flow Cytometry (handed off — run by that plugin's own local Academy
+  engine, see karcytics_plugins.flow_cytometry.tutorials.core_intro_handoff;
+  this Hub course just parks at module_phase_wait while it runs)
+  ├── Welcome, toolbar, file safety
+  ├── Download the demo FCS file (auto-placed in Downloads)
+  ├── Import the demo file
+  └── Save a workflow
 
   Back to Home
   ├── 22. Graduation summary — see the workflow card
@@ -44,67 +43,13 @@ The ``Course.id`` (``core_intro_v1``) is a stable identifier referenced by
 content evolves, so a version bump here should never rename it.
 """
 
-from typing import Any
-
 from karcytics_sdk.plugin.tutorial_models import (
-    ActionStep,
     BranchingStep,
     Course,
     InfoStep,
     InteractionStep,
     WaitForEventStep,
 )
-
-
-def _copy_demo_file(main_panel: Any) -> None:  # noqa: ARG001
-    """Copy the bundled demo FCS file to the user's Downloads directory.
-
-    If an identical demo file already exists, no copy is performed. Existing files
-    with different contents are preserved by selecting a unique destination name.
-    """
-    import contextlib
-    import shutil
-    from pathlib import Path
-
-    from karcytics.core.resource_manager import resource_path
-
-    # Find the bundled demo file in the repository or MEIPASS
-    src_file = resource_path("karcytics/tutorials/assets/demo_tutorial.fcs")
-
-    if not src_file.exists():
-        return
-
-    # Use QStandardPaths to safely resolve the OS's real Downloads folder
-    from PyQt6.QtCore import QStandardPaths
-
-    download_loc = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
-    downloads_dir = Path(download_loc) if download_loc else Path.home() / "Downloads"
-
-    downloads_dir.mkdir(exist_ok=True, parents=True)
-
-    dest_file = downloads_dir / "demo_tutorial.fcs"
-
-    with contextlib.suppress(Exception):
-        if dest_file.exists():
-            # Check if sizes match to avoid overwriting a user's differently sized file of the same name  # noqa: E501
-            if dest_file.stat().st_size == src_file.stat().st_size:
-                return  # It's already our demo file
-
-            # If size differs, create a unique filename so we don't overwrite their work
-            suffix = 1
-            while True:
-                new_dest = downloads_dir / f"demo_tutorial_{suffix}.fcs"
-                if not new_dest.exists():
-                    dest_file = new_dest
-                    break
-                if new_dest.stat().st_size == src_file.stat().st_size:
-                    return  # Already extracted previously
-                suffix += 1
-
-        shutil.copy(src_file, dest_file)
-
-
-# Demo FCS logic now handled by `_copy_demo_file` action step.
 
 # ── Step definitions ──────────────────────────────────────────────────────────
 
@@ -117,26 +62,73 @@ _steps = [
         ),
         cyto_emotion="cheering",
         cyto_animation="cheering",
-        next_step_id="hub_theme_intro",
+        next_step_id="hub_capabilities_intro",
     ),
     InfoStep(
-        id="hub_theme_intro",
+        id="hub_capabilities_intro",
         text=(
-            "Before we go any further, let's get you set up. You can change your "
-            "theme anytime from the **Theme** menu at the top left — try switching to "
-            "a different theme if you prefer."
+            "Karcytics is your powerful, extensible platform for complex data analysis. "
+            "It lets you run custom modules locally, completely offline and secure, "
+            "and manage all your workflows natively."
         ),
         cyto_emotion="talking",
-        next_step_id="hub_logs_intro",
+        next_step_id="hub_open_preferences",
     ),
-    InfoStep(
-        id="hub_logs_intro",
+    WaitForEventStep(
+        id="hub_open_preferences",
         text=(
-            "And if things ever go sideways, you can always peek under the hood: "
-            "go to **Help → View Logs** to see exactly what Karcytics is doing behind "
-            "the scenes."
+            "First, let's get you set up. Open the **Preferences** dialog from the "
+            "menu bar (**Karcytics → Preferences**) so we can customize your workspace."
         ),
         cyto_emotion="pointing",
+        event_name="PREFERENCES_OPENED",
+        allow_interaction=True,
+        next_step_id="hub_about_appearance",
+    ),
+    InteractionStep(
+        id="hub_about_appearance",
+        text=(
+            "This is the unified Preferences dialog. It starts on the **About** page, "
+            "where you can learn about Karcytics. Now, click on **Appearance** in the "
+            "left menu to change your theme."
+        ),
+        cyto_emotion="pointing",
+        target_widget_names=["nav_list"],
+        target_widget_name="nav_list",
+        event_trigger="currentRowChanged",
+        allow_interaction=True,
+        next_step_id="hub_change_theme",
+    ),
+    InteractionStep(
+        id="hub_change_theme",
+        text=(
+            "Here you can tweak how Karcytics looks and feels. Try switching your **Theme** "
+            "to one you prefer, then click **Privacy & Diagnostics** in the left menu "
+            "when you're done."
+        ),
+        cyto_emotion="happy",
+        target_widget_names=["theme_settings_widget", "nav_list"],
+        target_widget_name="nav_list",
+        event_trigger="currentRowChanged",
+        allow_interaction=True,
+        next_step_id="hub_preferences_close",
+    ),
+    WaitForEventStep(
+        id="hub_preferences_close",
+        text=(
+            "This is the **Privacy & Diagnostics** page. The checkbox controls one specific thing: "
+            "whether Karcytics **automatically** sends a report if the app crashes hard — "
+            "the kind where it shuts down entirely.\n\n"
+            "If the box is **unchecked**, nothing is ever sent without your knowledge. "
+            "You'll still see the crash dialog and can choose to send manually at any time — "
+            "that manual option is always available, regardless of this setting.\n\n"
+            "Completely optional — tick the box if you'd like to help, or skip it!\n\n"
+            "Whenever you're ready, **close the Preferences dialog** to continue."
+        ),
+        cyto_emotion="idle",
+        target_widget_names=["consent_checkbox"],
+        event_name="PREFERENCES_CLOSED",
+        allow_interaction=True,
         next_step_id="hub_orientation",
     ),
     InfoStep(
@@ -204,7 +196,7 @@ _steps = [
     InfoStep(
         id="ws_store_catalog_explain",
         text=(
-            "Every module here is signed and checked against our Root CA before it's allowed to show a **🛡️ VERIFIED** badge — that's your guarantee it hasn't been tampered with. Updates get the same check, automatically."  # noqa: E501
+            "Every module here is cryptographically verified by our built-in security checks before it's allowed to run — that's your guarantee it hasn't been tampered with. Updates get the same check, automatically."  # noqa: E501
         ),
         cyto_emotion="talking",
         next_step_id="ws_store_flow_details_action",
@@ -218,17 +210,23 @@ _steps = [
         allow_interaction=True,
         next_step_id="ws_store_details_explain",
     ),
-    InfoStep(
+    WaitForEventStep(
         id="ws_store_details_explain",
-        text=("This panel is the module's full story: what it does, and who built it."),
+        text=(
+            "This panel is the module's full story: what it does, and who built it.\n\n"
+            "Take a look around, and when you're done, **close this details panel**."
+        ),
         cyto_emotion="talking",
-        target_widget_names=["ModuleDetailsPanel"],
+        target_widget_names=["PluginDetailsDialog"],
+        event_name="STORE_MODULE_DETAILS_CLOSED",
+        allow_interaction=True,
         next_step_id="ws_store_install_action",
     ),
     WaitForEventStep(
         id="ws_store_install_action",
         text=(
-            "Grab the **latest version** if you haven't already, then **close** the Marketplace to head back."  # noqa: E501
+            "Grab the **latest version** if you haven't already, "
+            "then **close** the Marketplace to head back."
         ),
         cyto_emotion="talking",
         target_widget_names=["store_card_flow_cytometry"],
@@ -269,92 +267,33 @@ _steps = [
         target_widget_names=["module_card_flow_cytometry"],
         event_name="MODULE_OPENED",
         allow_interaction=True,
-        next_step_id="analysis_landed",
+        next_step_id="module_phase_wait",
     ),
     # ── PHASE 3: Analysis Panel ───────────────────────────────────────────────
+    # Flow Cytometry now runs as a genuinely separate OS process (the V3
+    # isolated engine) — the Hub can no longer findChild() its buttons or
+    # connect to their signals, so this phase's steps (welcome, data
+    # integrity, import the demo file, save the workflow) are no longer
+    # defined here. They live in karcytics_plugins.flow_cytometry.tutorials
+    # .core_intro_handoff, run by that plugin's own local Academy engine —
+    # the same mechanism its course1_fundamentals uses to spotlight its own
+    # real widgets from inside its own process. This step just parks the
+    # Hub's tour while that runs; plugin_loader.py's
+    # _instantiate_isolated_overlay is what actually starts the handoff
+    # course (staged via daemon.pending_academy_handoff, right as this step
+    # becomes current), and karcytics.core.plugins.loader's
+    # _wire_academy_handoff_forwarding is what jumps this tour straight to
+    # analysis_saved_confirm_spotlight once that course reports back done —
+    # this step's own next_step_id below is never actually reached through
+    # the normal Next-button path, only kept so the step is never left in a
+    # dangling state.
     InfoStep(
-        id="analysis_landed",
+        id="module_phase_wait",
         text=(
-            "🧬 Welcome to **Flow Cytometry**! Every module gets a workspace built just for what it does."  # noqa: E501
+            "🧬 Head into **Flow Cytometry** — I'll meet you there to walk through importing data and saving your first workflow. Click next here once done."  # noqa: E501
         ),
-        cyto_emotion="surprised",
-        next_step_id="analysis_toolbar",
-    ),
-    InfoStep(
-        id="analysis_toolbar",
-        text=(
-            "Up top: **← Home** takes you back to the dashboard any time, or close this project outright."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        target_widget_names=["analysisToolBar"],
-        next_step_id="analysis_data_integrity",
-    ),
-    InfoStep(
-        id="analysis_data_integrity",
-        text=(
-            "One thing before you import anything: Karcytics never touches your raw files. On import, it hashes the file (SHA-256) and copies it into this project's `` `assets/` `` folder — your original stays exactly where it was, and anyone who opens this project later gets a hash check for free, so silent corruption doesn't slip through."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        next_step_id="analysis_import_auto_download",
-    ),
-    ActionStep(
-        id="analysis_import_auto_download",
-        text="",
-        action=_copy_demo_file,
-        next_step_id="analysis_import_copy_warning",
-    ),
-    InfoStep(
-        id="analysis_import_copy_warning",
-        text=(
-            "Time to import something! I've dropped a demo file (`` `demo_tutorial.fcs` ``) in your Downloads folder.\n\n"  # noqa: E501
-            "When it asks whether to copy the file into your workspace, say yes — that's what keeps the project self-contained. "  # noqa: E501
-            "Skipping the copy is fine for huge files, but it just links to the original — move that file later and Karcytics loses track of it."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        next_step_id="analysis_import_action",
-    ),
-    InteractionStep(
-        id="analysis_import_action",
-        text=(
-            "Click **➕ Add Samples** in the ribbon and pick that"
-            "`` `demo_tutorial.fcs` `` file from Downloads."
-        ),
-        target_widget_name="ImportDataButton",
-        event_trigger="clicked",
         cyto_emotion="pointing",
-        next_step_id="analysis_import_wait",
-    ),
-    WaitForEventStep(
-        id="analysis_import_wait",
-        text="Pick the file and give it a second to load...",
-        cyto_emotion="scanning",
-        event_name="FILE_IMPORTED",
         allow_interaction=True,
-        next_step_id="analysis_workflow_intro",
-    ),
-    InfoStep(
-        id="analysis_workflow_intro",
-        text=(
-            "Loaded! A **Workflow** is a snapshot of everything right now — settings, gates, parameters — so you can pick this exact session back up later."  # noqa: E501
-        ),
-        cyto_emotion="talking",
-        next_step_id="analysis_save_action",
-    ),
-    WaitForEventStep(
-        id="analysis_save_action",
-        text=("Let's lock this in. Click **Save Workflow** in the toolbar."),
-        cyto_emotion="happy",
-        target_widget_names=["SaveNewWorkflowButton"],
-        event_name="WORKFLOW_SAVED",
-        allow_interaction=True,
-        next_step_id="analysis_return_home_action",
-    ),
-    InteractionStep(
-        id="analysis_return_home_action",
-        text=("Saved. Now click **← Home** and let's see it show up on your dashboard."),
-        target_widget_name="btn_home",
-        event_trigger="clicked",
-        cyto_emotion="pointing",
         next_step_id="analysis_saved_confirm_spotlight",
     ),
     InfoStep(
@@ -364,6 +303,7 @@ _steps = [
         ),
         cyto_emotion="happy",
         target_widget_names=["workflows_container"],
+        allow_scroll=True,
         next_step_id="cleanup_explain",
     ),
     # ── PHASE 4: Graduation ───────────────────────────────────────────────────

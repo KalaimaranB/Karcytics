@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     from karcytics_sdk.host.module_status_widget import ModuleStatusWidget
+    from karcytics_sdk.plugin.daemon import PluginUIDaemon
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +161,120 @@ class PluginLoaderFactory:
             daemon = PluginUIDaemon.get_instance(module_id)
             widget = ModuleStatusWidget(daemon, module_name=display_name)
             PluginLoaderFactory._wire_theme_sync(widget)
+            PluginLoaderFactory._wire_diagnostics_forwarding(daemon)
+            PluginLoaderFactory._wire_state_changed_forwarding(daemon)
+            PluginLoaderFactory._wire_academy_handoff_forwarding(daemon)
             return widget
 
         return _factory  # type: ignore[return-value]
+
+    @staticmethod
+    def _wire_diagnostics_forwarding(daemon: "PluginUIDaemon") -> None:
+        """Forward an isolated module's `diagnostics_error` events to the Hub's `DiagnosticEngine`.
+
+        A plugin's own `karcytics_sdk.plugin.runtime_services.diagnostics
+        .report_error(...)` (the isolated equivalent of an in-process
+        plugin's `self.logger.error(..., exc_info=True)` reaching the Hub's
+        `AutoReportHandler`) pushes a `"diagnostics_error"` event over this
+        same daemon's frame channel — nothing on the Hub side was ever
+        subscribed to `event_received` for that topic, so every one of those
+        reports vanished silently before this existed. `get_instance()` is a
+        singleton keyed by plugin_id (same as `_wire_theme_sync`'s widget),
+        so guard against re-wiring a second listener on every reopen of an
+        already-running module.
+        """
+        if getattr(daemon, "_diagnostics_forwarding_wired", False):
+            return
+        daemon._diagnostics_forwarding_wired = True  # type: ignore[attr-defined]
+
+        def _on_event(topic: str, payload: object) -> None:
+            if topic != "diagnostics_error" or not isinstance(payload, dict):
+                return
+
+            from karcytics.core.diagnostics import diagnostics
+
+            diagnostics.report_error(
+                message=payload.get("message", ""),
+                plugin_id=payload.get("plugin_id"),
+                fatal=bool(payload.get("fatal", False)),
+                exception_repr=payload.get("exception"),
+                traceback_str=payload.get("traceback"),
+            )
+
+        daemon.event_received.connect(_on_event)
+
+    @staticmethod
+    def _wire_state_changed_forwarding(daemon: "PluginUIDaemon") -> None:
+        """Finish the `FILE_IMPORTED` wire for isolated modules.
+
+        `ui_daemon.py`'s `_build_panel()` already connects the real panel's
+        `state_changed` signal to `send_event("state_changed", {"file_count":
+        ...})` over this daemon's frame channel — its own comment says the
+        payload shape "must match what `WorkspaceWindow
+        ._on_daemon_state_changed()` expects", but that Hub-side method was
+        never written, so every one of those frames was silently dropped
+        (same class of gap `_wire_diagnostics_forwarding` above closed for
+        `diagnostics_error`). `WorkspaceWindow._on_wizard_state_changed()`
+        can't fill this role itself — it reads `mw.wizard_panel.state`, and
+        for an isolated module `mw.wizard_panel` is the `ModuleStatusWidget`
+        this factory builds, not the real panel living in the daemon's own
+        process; it has no `.state`.
+
+        Tracks the last seen file_count per daemon (mirroring
+        `WorkspaceWindow._last_import_file_count`'s own bookkeeping) so this
+        only fires on an actual *increase*, not every state_changed tick.
+        """
+        if getattr(daemon, "_state_changed_forwarding_wired", False):
+            return
+        daemon._state_changed_forwarding_wired = True  # type: ignore[attr-defined]
+        daemon._last_seen_file_count = 0  # type: ignore[attr-defined]
+
+        def _on_event(topic: str, payload: object) -> None:
+            if topic != "state_changed" or not isinstance(payload, dict):
+                return
+            file_count = payload.get("file_count")
+            if not isinstance(file_count, int):
+                return
+            last_seen = getattr(daemon, "_last_seen_file_count", 0)
+            if file_count <= last_seen:
+                return
+            daemon._last_seen_file_count = file_count  # type: ignore[attr-defined]
+
+            from karcytics.core.event_bus import KarcyticsEvent, event_bus
+
+            event_bus.emit(KarcyticsEvent.FILE_IMPORTED, "")
+
+        daemon.event_received.connect(_on_event)
+
+    @staticmethod
+    def _wire_academy_handoff_forwarding(daemon: "PluginUIDaemon") -> None:
+        """Resumes the Hub's `core_intro` tour once its handed-off module phase finishes.
+
+        Inside the isolated plugin process, `karcytics_plugins.flow_cytometry.ui_daemon`'s
+        `_maybe_start_onboarding_handoff()` sends an
+        `"academy_handoff_complete"` frame over this same daemon's channel
+        when its local `core_intro_handoff` course completes (see
+        `plugin_loader.py::_instantiate_isolated_overlay`, which is what
+        told that process to start it in the first place, via
+        `daemon.pending_academy_handoff`). Advancing straight to
+        `"analysis_saved_confirm_spotlight"` here is what lets the Hub's own
+        tour pick back up for the graduation phase, back in the Hub UI.
+        """
+        if getattr(daemon, "_academy_handoff_forwarding_wired", False):
+            return
+        daemon._academy_handoff_forwarding_wired = True  # type: ignore[attr-defined]
+
+        def _on_event(topic: str, _payload: object) -> None:
+            if topic != "academy_handoff_complete":
+                return
+
+            from karcytics.core.tutorial_manager import global_tutorial_manager
+
+            active_course = global_tutorial_manager.active_course
+            if active_course and active_course.id == "core_intro_v1":
+                global_tutorial_manager.next_step("analysis_saved_confirm_spotlight")
+
+        daemon.event_received.connect(_on_event)
 
     @staticmethod
     def _wire_theme_sync(widget: "ModuleStatusWidget") -> None:
