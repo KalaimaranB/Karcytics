@@ -257,8 +257,44 @@ class ProjectLauncherWindow(QMainWindow):
             if hasattr(self, "_theme_loading_overlay") and self._theme_loading_overlay.isVisible():
                 self._theme_loading_overlay.resize(self._central_widget.size())
 
+    def _find_tutorial_target_widgets(self, name: str) -> list:
+        """Search for a named widget across the main window AND any open dialogs.
+
+        The Hub's main window only contains Hub widgets — dialogs like
+        PreferencesDialog are separate top-level windows, so findChildren on
+        self will never find widgets inside them.  This helper casts a wider
+        net by also searching any open QDialog.
+        """
+        from PyQt6.QtWidgets import QApplication, QDialog
+
+        # Search self first
+        results = [w for w in self.findChildren(QWidget, name) if w and w.isVisible()]
+        if results:
+            return results
+
+        # tutorial_id property fallback on self
+        for w in self.findChildren(QWidget):
+            if w.property("tutorial_id") == name and w.isVisible():
+                results.append(w)
+        if results:
+            return results
+
+        # Widen search to any open top-level dialog
+        for top in QApplication.topLevelWidgets():
+            if isinstance(top, QDialog) and top.isVisible():
+                found = [w for w in top.findChildren(QWidget, name) if w and w.isVisible()]
+                results.extend(found)
+                if not found:
+                    for w in top.findChildren(QWidget):
+                        if w.property("tutorial_id") == name and w.isVisible():
+                            results.append(w)
+
+        return results
+
     def _poll_tutorial_overlay(self) -> None:
         """Lightweight timer slot: re-renders the overlay when the step changes."""
+        from karcytics_sdk.plugin.tutorial_models import InteractionStep
+
         from karcytics.core.tutorial_manager import global_tutorial_manager
 
         if not self._hub_tutorial_overlay.isVisible():
@@ -271,24 +307,19 @@ class ProjectLauncherWindow(QMainWindow):
 
         self._sync_hub_overlay_geometry()
 
-        # Only re-render when the step actually changes
+        # On step change: re-render and wire up any InteractionStep signal
         if step.id != getattr(self, "_hub_last_step_id", None):
             self._hub_last_step_id = step.id
             self._hub_tutorial_overlay.render_step(step)
+
+            if isinstance(step, InteractionStep) and step.target_widget_name:
+                self._wire_hub_interaction_step(step)
 
         # Always update target rectangles to track widget movement
         targets = []
         if getattr(step, "target_widget_names", []):
             for name in step.target_widget_names:
-                # First try objectName match
-                by_name = [w for w in self.findChildren(QWidget, name) if w and w.isVisible()]
-                if by_name:
-                    targets.extend(by_name)
-                else:
-                    # Fall back to tutorial_id property match
-                    for w in self.findChildren(QWidget):
-                        if w.property("tutorial_id") == name and w.isVisible():
-                            targets.append(w)
+                targets.extend(self._find_tutorial_target_widgets(name))
 
         rects = []
         for w in targets:
@@ -300,6 +331,44 @@ class ProjectLauncherWindow(QMainWindow):
 
         self._hub_tutorial_overlay.set_targets(rects)
         self._hub_tutorial_overlay.raise_()
+
+    def _wire_hub_interaction_step(self, step) -> None:
+        """Connect an InteractionStep's signal so it auto-advances the tutorial.
+
+        Searches both the main window and any open dialogs for the target widget.
+        Uses a stable connection key so repeated poll ticks don't double-connect.
+        """
+        if not hasattr(self, "_hub_interaction_connections"):
+            self._hub_interaction_connections: dict[str, object] = {}
+
+        targets = self._find_tutorial_target_widgets(step.target_widget_name)
+        for target_w in targets:
+            conn_key = f"{step.id}__{step.target_widget_name}__{step.event_trigger}__{id(target_w)}"
+            if conn_key in self._hub_interaction_connections:
+                continue
+            if not hasattr(target_w, step.event_trigger):
+                continue
+
+            def _make_advancer(step_id: str):
+                def _advance(*_args):
+                    current = global_tutorial_manager.current_step
+                    if current and current.id == step_id:
+                        global_tutorial_manager.next_step()
+
+                return _advance
+
+            from karcytics.core.tutorial_manager import global_tutorial_manager
+
+            advancer = _make_advancer(step.id)
+            self._hub_interaction_connections[conn_key] = advancer
+            try:
+                getattr(target_w, step.event_trigger).connect(advancer)
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    f"Hub tutorial: failed to connect {step.event_trigger} on {target_w}: {e}"
+                )
 
     def _on_hub_tutorial_next(self) -> None:
         from karcytics_sdk.plugin.tutorial_models import BranchingStep

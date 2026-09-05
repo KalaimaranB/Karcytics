@@ -356,6 +356,15 @@ class ThemeManager(QObject):
                 logger.error(f"Failed to apply SDK styles: {e}", exc_info=True)
 
             self.theme_changed.emit()
+
+            # Notify SDK widgets running in the core process (like TutorialOverlay, Cyto)
+            try:
+                from karcytics_sdk.plugin.theme_fallback import theme_manager as sdk_theme_manager
+
+                sdk_theme_manager.theme_changed.emit()
+            except Exception as e:
+                logger.error(f"Failed to emit SDK theme changed: {e}", exc_info=True)
+
             logger.info("Global stylesheet updated successfully.")
 
         except Exception as e:

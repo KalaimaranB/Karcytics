@@ -46,30 +46,38 @@ class DiagnosticsSettingsWidget(QWidget):
         self.title_label.setFont(Fonts.H2)
         layout.addWidget(self.title_label)
 
-        dsn_configured = crash_reporting.get_configured_dsn() is not None
-
         self.consent_checkbox = QCheckBox("Automatically send crash reports to help fix issues")
+        self.consent_checkbox.setObjectName("consent_checkbox")
         self.consent_checkbox.setChecked(crash_reporting.is_consent_given() is True)
-        self.consent_checkbox.setEnabled(dsn_configured)
+        self.consent_checkbox.setEnabled(
+            True
+        )  # Always interactive; init_crash_reporting guards actual sending
         self.consent_checkbox.toggled.connect(crash_reporting.set_consent)
         layout.addWidget(self.consent_checkbox)
 
+        self.consent_detail_label = QLabel(
+            "When checked, Karcytics will automatically send a report if the app crashes "
+            "or encounters a fatal error — without prompting you each time. "
+            "If unchecked, nothing is ever sent automatically; you will still "
+            "be shown the crash dialog and can choose to send manually."
+        )
+        self.consent_detail_label.setFont(Fonts.CAPTION)
+        self.consent_detail_label.setWordWrap(True)
+        layout.addWidget(self.consent_detail_label)
+
         self.detail_label = QLabel(
-            (
-                "When enabled, every error is automatically sent to help diagnose and fix issues.\n\n"
-                "Each report includes:\n"
-                "  • Error message and stack trace\n"
-                "  • Last 50 log lines from this session (the 'black box')\n"
-                "  • OS name and version, app release version\n"
-                "  • Plugin ID and version (if the error came from a plugin)\n\n"
-                "File paths are stripped before anything leaves this machine — "
-                "paths ending in .fcs, .csv, .xlsx and similar data extensions "
-                "are replaced with <redacted-file>. Your home directory path is "
-                "also replaced with <home>. Raw variable values from stack "
-                "frames are never captured."
-            )
-            if dsn_configured
-            else "Crash reporting isn't configured for this build."
+            "Regardless of this setting, when an error dialog appears you can always "
+            "choose to send a report manually — that never requires consent and always "
+            "shows you exactly what will be sent before you confirm.\n\n"
+            "What's included in every report (auto or manual):\n"
+            "  \u2022 Error message and stack trace\n"
+            "  \u2022 OS name and version, app release version\n"
+            "  \u2022 Plugin ID and version (if the error came from a plugin)\n\n"
+            "What is never sent:\n"
+            "  \u2022 File paths — replaced with <redacted-file> before leaving this machine\n"
+            "  \u2022 Your home directory path — replaced with <home>\n"
+            "  \u2022 Raw variable values from stack frames\n"
+            "  \u2022 Any patient data, sample names, or file contents"
         )
         self.detail_label.setFont(Fonts.CAPTION)
         self.detail_label.setWordWrap(True)
@@ -247,6 +255,9 @@ class DiagnosticsSettingsWidget(QWidget):
 
     def _apply_styles(self):
         theme_manager.apply_style(self.title_label, f"color: {Colors.FG_PRIMARY};")
+        theme_manager.apply_style(
+            self.consent_detail_label, f"color: {Colors.FG_SECONDARY}; font-style: italic;"
+        )
         theme_manager.apply_style(self.detail_label, f"color: {Colors.FG_SECONDARY};")
 
         if hasattr(self, "_dev_status_label"):

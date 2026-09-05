@@ -47,6 +47,7 @@ from karcytics_sdk.plugin.tutorial_models import (
     BranchingStep,
     Course,
     InfoStep,
+    InteractionStep,
     WaitForEventStep,
 )
 
@@ -61,26 +62,73 @@ _steps = [
         ),
         cyto_emotion="cheering",
         cyto_animation="cheering",
-        next_step_id="hub_theme_intro",
+        next_step_id="hub_capabilities_intro",
     ),
     InfoStep(
-        id="hub_theme_intro",
+        id="hub_capabilities_intro",
         text=(
-            "Before we go any further, let's get you set up. You can change your "
-            "theme anytime from the **Theme** menu at the top left — try switching to "
-            "a different theme if you prefer."
+            "Karcytics is your powerful, extensible platform for complex data analysis. "
+            "It lets you run custom modules locally, completely offline and secure, "
+            "and manage all your workflows natively."
         ),
         cyto_emotion="talking",
-        next_step_id="hub_logs_intro",
+        next_step_id="hub_open_preferences",
     ),
-    InfoStep(
-        id="hub_logs_intro",
+    WaitForEventStep(
+        id="hub_open_preferences",
         text=(
-            "And if things ever go sideways, you can always peek under the hood: "
-            "go to **Help → View Logs** to see exactly what Karcytics is doing behind "
-            "the scenes."
+            "First, let's get you set up. Open the **Preferences** dialog from the "
+            "menu bar (**Karcytics → Preferences**) so we can customize your workspace."
         ),
         cyto_emotion="pointing",
+        event_name="PREFERENCES_OPENED",
+        allow_interaction=True,
+        next_step_id="hub_about_appearance",
+    ),
+    InteractionStep(
+        id="hub_about_appearance",
+        text=(
+            "This is the unified Preferences dialog. It starts on the **About** page, "
+            "where you can learn about Karcytics. Now, click on **Appearance** in the "
+            "left menu to change your theme."
+        ),
+        cyto_emotion="pointing",
+        target_widget_names=["nav_list"],
+        target_widget_name="nav_list",
+        event_trigger="currentRowChanged",
+        allow_interaction=True,
+        next_step_id="hub_change_theme",
+    ),
+    InteractionStep(
+        id="hub_change_theme",
+        text=(
+            "Here you can tweak how Karcytics looks and feels. Try switching your **Theme** "
+            "to one you prefer, then click **Privacy & Diagnostics** in the left menu "
+            "when you're done."
+        ),
+        cyto_emotion="happy",
+        target_widget_names=["theme_settings_widget", "nav_list"],
+        target_widget_name="nav_list",
+        event_trigger="currentRowChanged",
+        allow_interaction=True,
+        next_step_id="hub_preferences_close",
+    ),
+    WaitForEventStep(
+        id="hub_preferences_close",
+        text=(
+            "This is the **Privacy & Diagnostics** page. The checkbox controls one specific thing: "
+            "whether Karcytics **automatically** sends a report if the app crashes hard — "
+            "the kind where it shuts down entirely.\n\n"
+            "If the box is **unchecked**, nothing is ever sent without your knowledge. "
+            "You'll still see the crash dialog and can choose to send manually at any time — "
+            "that manual option is always available, regardless of this setting.\n\n"
+            "Completely optional — tick the box if you'd like to help, or skip it!\n\n"
+            "Whenever you're ready, **close the Preferences dialog** to continue."
+        ),
+        cyto_emotion="idle",
+        target_widget_names=["consent_checkbox"],
+        event_name="PREFERENCES_CLOSED",
+        allow_interaction=True,
         next_step_id="hub_orientation",
     ),
     InfoStep(
@@ -162,17 +210,23 @@ _steps = [
         allow_interaction=True,
         next_step_id="ws_store_details_explain",
     ),
-    InfoStep(
+    WaitForEventStep(
         id="ws_store_details_explain",
-        text=("This panel is the module's full story: what it does, and who built it."),
+        text=(
+            "This panel is the module's full story: what it does, and who built it.\n\n"
+            "Take a look around, and when you're done, **close this details panel**."
+        ),
         cyto_emotion="talking",
-        target_widget_names=["ModuleDetailsPanel"],
+        target_widget_names=["PluginDetailsDialog"],
+        event_name="STORE_MODULE_DETAILS_CLOSED",
+        allow_interaction=True,
         next_step_id="ws_store_install_action",
     ),
     WaitForEventStep(
         id="ws_store_install_action",
         text=(
-            "Grab the **latest version** if you haven't already, then **close** the Marketplace to head back."  # noqa: E501
+            "Grab the **latest version** if you haven't already, "
+            "then **close** the Marketplace to head back."
         ),
         cyto_emotion="talking",
         target_widget_names=["store_card_flow_cytometry"],
@@ -236,7 +290,7 @@ _steps = [
     InfoStep(
         id="module_phase_wait",
         text=(
-            "🧬 Head into **Flow Cytometry** — I'll meet you there to walk through importing data and saving your first workflow."  # noqa: E501
+            "🧬 Head into **Flow Cytometry** — I'll meet you there to walk through importing data and saving your first workflow. Click next here once done."  # noqa: E501
         ),
         cyto_emotion="pointing",
         allow_interaction=True,
@@ -249,6 +303,7 @@ _steps = [
         ),
         cyto_emotion="happy",
         target_widget_names=["workflows_container"],
+        allow_scroll=True,
         next_step_id="cleanup_explain",
     ),
     # ── PHASE 4: Graduation ───────────────────────────────────────────────────

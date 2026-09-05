@@ -50,9 +50,12 @@ class KarcyticsEvent(Enum):
     STORE_OPENED = auto()  # args: () — Marketplace dialog was opened
     STORE_CLOSED = auto()  # args: () — Marketplace dialog was closed
     STORE_MODULE_DETAILS_OPENED = auto()  # args: () - Store module details dialog opened
+    STORE_MODULE_DETAILS_CLOSED = auto()  # args: () - Store module details dialog closed
     MODULE_OPENED = auto()  # args: (module_id: str) — analysis panel loaded
     FILE_IMPORTED = auto()  # args: (file_path: str) — a file was imported into a module
     WORKFLOW_SAVED = auto()  # args: (filename: str) — a workflow was saved
+    PREFERENCES_OPENED = auto()  # args: () — Preferences dialog was opened
+    PREFERENCES_CLOSED = auto()  # args: () — Preferences dialog was closed
 
 
 class EventManager(QObject):

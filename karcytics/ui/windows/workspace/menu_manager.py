@@ -46,9 +46,15 @@ class MenuManager:
             pref_cb=self.open_preferences,
         )
 
+        def _switch_theme(path: str) -> None:
+            from karcytics.core.preferences import core_preferences
+
+            theme_manager.load_theme(path)
+            core_preferences.set("theme", str(path))
+
         # --- View Menu (Theme) ---
         builder.add_theme_menu(
-            switch_theme_cb=lambda path: theme_manager.load_theme(path),
+            switch_theme_cb=_switch_theme,
             categorized_themes=theme_manager.get_categorized_themes(),
         )
 
