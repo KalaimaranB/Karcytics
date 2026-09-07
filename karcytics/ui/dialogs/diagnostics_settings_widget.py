@@ -23,21 +23,24 @@ from karcytics.core.config import AppConfig
 from karcytics.core.diagnostics import diagnostics
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
+_WIDGET_MIN_WIDTH = 480
+_WIDGET_MIN_HEIGHT = 320
+
 
 class DiagnosticsSettingsWidget(QWidget):
     """Lets the user control crash reporting consent and inspect diagnostic data."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Diagnostics & Privacy")
-        self.setMinimumSize(480, 320)
+        self.setMinimumSize(_WIDGET_MIN_WIDTH, _WIDGET_MIN_HEIGHT)
 
         self._setup_ui()
         self._apply_styles()
 
         theme_manager.theme_changed.connect(self._apply_styles)
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
@@ -253,7 +256,7 @@ class DiagnosticsSettingsWidget(QWidget):
             "Test error fired — check the ErrorReportDialog and your Sentry project."
         )
 
-    def _apply_styles(self):
+    def _apply_styles(self) -> None:
         theme_manager.apply_style(self.title_label, f"color: {Colors.FG_PRIMARY};")
         theme_manager.apply_style(
             self.consent_detail_label, f"color: {Colors.FG_SECONDARY}; font-style: italic;"
@@ -303,7 +306,7 @@ class DiagnosticsSettingsWidget(QWidget):
         """,
         )
 
-    def _send_test_event(self):
+    def _send_test_event(self) -> None:
         sent = crash_reporting.capture_error_data(
             {
                 "message": "Karcytics test event — safe to ignore.",

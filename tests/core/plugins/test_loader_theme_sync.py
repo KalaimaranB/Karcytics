@@ -21,7 +21,7 @@ class _FakeStatusWidget(QWidget):
     STATE_RUNNING = "running"
     state_changed = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.pushed_colors: list[dict[str, str]] = []
 
@@ -29,9 +29,11 @@ class _FakeStatusWidget(QWidget):
         self.pushed_colors.append(colors)
 
 
-def test_wire_theme_sync_pushes_current_colors_when_state_becomes_running(qapp):  # noqa: ARG001
+def test_wire_theme_sync_pushes_current_colors_when_state_becomes_running(
+    qapp: QApplication,
+) -> None:  # noqa: ARG001
     widget = _FakeStatusWidget()
-    PluginLoaderFactory._wire_theme_sync(widget)
+    PluginLoaderFactory._wire_theme_sync(widget)  # type: ignore[arg-type]
 
     widget.state_changed.emit(widget.STATE_RUNNING)
 
@@ -41,7 +43,7 @@ def test_wire_theme_sync_pushes_current_colors_when_state_becomes_running(qapp):
 
 def test_wire_theme_sync_ignores_non_running_state_transitions(qapp):  # noqa: ARG001
     widget = _FakeStatusWidget()
-    PluginLoaderFactory._wire_theme_sync(widget)
+    PluginLoaderFactory._wire_theme_sync(widget)  # type: ignore[arg-type]
 
     widget.state_changed.emit("spawning")
     widget.state_changed.emit("crashed")
@@ -51,7 +53,7 @@ def test_wire_theme_sync_ignores_non_running_state_transitions(qapp):  # noqa: A
 
 def test_wire_theme_sync_pushes_again_on_hub_theme_change(qapp):  # noqa: ARG001
     widget = _FakeStatusWidget()
-    PluginLoaderFactory._wire_theme_sync(widget)
+    PluginLoaderFactory._wire_theme_sync(widget)  # type: ignore[arg-type]
 
     try:
         hub_theme_manager.theme_changed.emit()
@@ -67,7 +69,7 @@ def test_wire_theme_sync_disconnects_from_hub_once_widget_is_destroyed(qapp):  #
     try to call push_theme() on a deleted C++ object and raise RuntimeError.
     """
     widget = _FakeStatusWidget()
-    PluginLoaderFactory._wire_theme_sync(widget)
+    PluginLoaderFactory._wire_theme_sync(widget)  # type: ignore[arg-type]
 
     widget.deleteLater()
     QApplication.processEvents()

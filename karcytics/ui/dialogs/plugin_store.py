@@ -662,7 +662,7 @@ class StoreLoaderWorker(QThread):
         try:
             # evaluate_store_state eagerly fetches each plugin's pyproject.toml and
             # returns the full author list extracted from the enriched inventory.
-            inventory = self.updater.evaluate_store_state()
+            inventory = self.updater.evaluate_store_state(cancel_check=self.isInterruptionRequested)
 
             # Augment with any manually-trusted local keys not covered by the remote registry
             manual_keys_dir = AppConfig.APP_DATA_DIR / "trusted_roots"
@@ -788,12 +788,12 @@ class PluginStoreDialog(QDialog):
 
         if hasattr(self, "worker") and self.worker.isRunning():
             logger.debug("PluginStoreDialog closing: requesting StoreLoaderWorker stop...")
-            self.worker.quit()
-            # Give the thread up to 2 s to finish any in-progress work gracefully.
-            if not self.worker.wait(2000):
-                logger.warning("StoreLoaderWorker did not stop within 2 s — terminating forcibly.")
-                self.worker.terminate()
-                self.worker.wait(1000)
+            self.worker.requestInterruption()
+            # Give the thread up to 1 s to finish any in-progress work gracefully.
+            if not self.worker.wait(1000):
+                logger.warning("StoreLoaderWorker did not stop within 1 s — keeping dialog open.")
+                event.ignore()
+                return
             logger.debug("StoreLoaderWorker stopped on dialog close.")
 
         event_bus.unsubscribe(KarcyticsEvent.PLUGIN_INSTALLED, self._on_plugin_event)

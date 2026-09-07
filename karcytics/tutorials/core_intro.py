@@ -283,17 +283,14 @@ _steps = [
     # course (staged via daemon.pending_academy_handoff, right as this step
     # becomes current), and karcytics.core.plugins.loader's
     # _wire_academy_handoff_forwarding is what jumps this tour straight to
-    # analysis_saved_confirm_spotlight once that course reports back done —
-    # this step's own next_step_id below is never actually reached through
-    # the normal Next-button path, only kept so the step is never left in a
-    # dangling state.
-    InfoStep(
+    # analysis_saved_confirm_spotlight once that course reports back done.
+    WaitForEventStep(
         id="module_phase_wait",
         text=(
-            "🧬 Head into **Flow Cytometry** — I'll meet you there to walk through importing data and saving your first workflow. Click next here once done."  # noqa: E501
+            "🧬 Head into **Flow Cytometry** — I'll meet you there to walk through importing data and saving your first workflow."  # noqa: E501
         ),
         cyto_emotion="pointing",
-        allow_interaction=True,
+        event_name="PLUGIN_HANDOFF_COMPLETE",
         next_step_id="analysis_saved_confirm_spotlight",
     ),
     InfoStep(

@@ -52,7 +52,11 @@ class KarcyticsEvent(Enum):
     STORE_MODULE_DETAILS_OPENED = auto()  # args: () - Store module details dialog opened
     STORE_MODULE_DETAILS_CLOSED = auto()  # args: () - Store module details dialog closed
     MODULE_OPENED = auto()  # args: (module_id: str) — analysis panel loaded
+    # args: () — an isolated plugin completed its inner tutorial handoff
+    PLUGIN_HANDOFF_COMPLETE = auto()
     FILE_IMPORTED = auto()  # args: (file_path: str) — a file was imported into a module
+    # args: (count: int) — a module's imported file count changed
+    MODULE_IMPORT_COUNT_CHANGED = auto()
     WORKFLOW_SAVED = auto()  # args: (filename: str) — a workflow was saved
     PREFERENCES_OPENED = auto()  # args: () — Preferences dialog was opened
     PREFERENCES_CLOSED = auto()  # args: () — Preferences dialog was closed

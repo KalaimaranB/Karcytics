@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from karcytics_sdk.plugin import DangerButton, PrimaryButton, SecondaryButton
@@ -18,6 +19,8 @@ from PyQt6.QtWidgets import (
 
 from karcytics.shared.ui.alerts import ask_question, show_error, show_info
 from karcytics.ui.theme import Colors, theme_manager
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowPropertiesDialog(QDialog):
@@ -41,9 +44,7 @@ class WorkflowPropertiesDialog(QDialog):
 
             self.full_data = AtomicJsonFile.load(self.wf_path, default={})
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).debug(f"Failed to load workflow data: {e}")
+            logger.debug(f"Failed to load workflow data: {e}")
             self.full_data = {}
 
         self.metadata = self.full_data.get("metadata", {})
@@ -76,7 +77,8 @@ class WorkflowPropertiesDialog(QDialog):
         modified_str = "Unknown"
         if self.wf_path.exists():
             stat = self.wf_path.stat()
-            created_str = datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M:%S")
+            birth_time = getattr(stat, "st_birthtime", stat.st_ctime)
+            created_str = datetime.fromtimestamp(birth_time).strftime("%Y-%m-%d %H:%M:%S")
             modified_str = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
         # Form Layout for Metadata
@@ -212,7 +214,7 @@ class WorkflowPropertiesDialog(QDialog):
             QPushButton:hover {{ background: {Colors.ACCENT_DANGER}44; border-radius: 4px; }}
         """,
         )
-        btn_del.clicked.connect(lambda: self._on_delete_attachment(key, name))
+        btn_del.clicked.connect(lambda _, k=key, n=name, r=row: self._on_delete_attachment(k, n, r))
 
         row_layout.addWidget(lbl_name)
         row_layout.addStretch()
@@ -228,32 +230,33 @@ class WorkflowPropertiesDialog(QDialog):
             size /= 1024.0
         return f"{size:.1f} TB"
 
-    def _on_save_metadata(self):
+    def _on_save_metadata(self) -> None:
         tags_raw = self.edit_tags.text()
         tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
         desc = self.edit_desc.toPlainText().strip()
 
-        self.metadata["tags"] = tags
-        self.metadata["description"] = desc
+        new_metadata = dict(self.metadata)
+        new_metadata["tags"] = tags
+        new_metadata["description"] = desc
 
         try:
             self.project_manager.save_workflow(
                 self.module_id,
                 self.payload,
-                self.metadata,
+                new_metadata,
                 self.filename,
                 self.attachments,
             )
+            self.metadata["tags"] = tags
+            self.metadata["description"] = desc
             self.full_data["metadata"] = self.metadata
             self.workflow_updated.emit()
             show_info(self, "Success", "Workflow metadata updated successfully.")
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).error(f"Failed to save metadata: {e}")
+            logger.error(f"Failed to save metadata: {e}")
             show_error(self, "Error", f"Failed to save metadata:\n{str(e)}")
 
-    def _on_delete_attachment(self, key: str, name: str):
+    def _on_delete_attachment(self, key: str, name: str, row: QWidget) -> None:
         if ask_question(
             self,
             "Delete Data Block",
@@ -261,7 +264,8 @@ class WorkflowPropertiesDialog(QDialog):
         ):
             if self.project_manager.delete_workflow_attachment(self.filename, key):
                 self.attachment_deleted.emit()
-                self.accept()
+                row.deleteLater()
+                self.attachments = [a for a in self.attachments if a.get("key") != key]
             else:
                 show_error(self, "Error", "Failed to delete attachment.")
 

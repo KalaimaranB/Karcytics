@@ -23,6 +23,11 @@ from karcytics.core.config import AppConfig
 from karcytics.core.diagnostics import diagnostics
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
+_DIALOG_WIDTH = 480
+_DIALOG_HEIGHT = 320
+_LAYOUT_MARGIN = 24
+_LAYOUT_SPACING = 16
+
 
 class DiagnosticsSettingsDialog(QDialog):
     """Lets the user control crash reporting consent and inspect diagnostic data."""

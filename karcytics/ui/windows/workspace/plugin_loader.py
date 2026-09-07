@@ -1,8 +1,10 @@
 """Plugin Loader Manager for WorkspaceWindow."""
 
 import logging
+from collections.abc import Callable
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtWidgets import QWidget
 
 from karcytics.core.event_bus import KarcyticsEvent, event_bus
 
@@ -203,13 +205,13 @@ class PluginLoaderManager:
 
         mw._module_thread.start()
 
-    def on_module_loaded(self, manifest: dict, PanelClass: type) -> None:  # noqa: N803
+    def on_module_loaded(self, manifest: dict, PanelClass: Callable[[], QWidget]) -> None:  # noqa: N803
         """
         Stores the loaded module UI class and starts the loader's warp-out transition.
 
         Parameters:
             manifest (dict): Module manifest containing the module identifier.
-            PanelClass (type): Loaded UI panel class.
+            PanelClass (Callable[[], QWidget]): Loaded UI panel class or factory function.
         """
         mw = self.main_window
         module_id = manifest["id"]
@@ -303,7 +305,9 @@ class PluginLoaderManager:
             )
             self.crossfade_to_analysis()
 
-    def _instantiate_isolated_overlay(self, manifest: dict, PanelClass: type) -> None:  # noqa: N803
+    def _instantiate_isolated_overlay(
+        self, manifest: dict, panel_class: Callable[[], QWidget]
+    ) -> None:
         """Construct an isolated module's `ModuleStatusWidget` as a blocking
         overlay on top of whatever the Hub is currently showing, instead of
         embedding it into the analysis page's content area.
@@ -356,7 +360,7 @@ class PluginLoaderManager:
         )
 
         try:
-            mw.wizard_panel = PanelClass()
+            mw.wizard_panel = panel_class()
             assert mw.wizard_panel is not None
             widget = mw.wizard_panel
 
@@ -525,13 +529,13 @@ class PluginLoaderManager:
         mw._pending_workflow_filename = None
         mw._pending_workflow_metadata = None
 
-    def instantiate_module_panel(self, manifest: dict, PanelClass: type) -> None:  # noqa: N803
+    def instantiate_module_panel(self, manifest: dict, PanelClass: Callable[[], QWidget]) -> None:  # noqa: N803
         """
         Instantiates the plugin panel, configures its UI integrations, and emits the module-opened event.
 
         Parameters:
             manifest (dict): Module metadata containing the module identifier and optional display details.
-            PanelClass (type): Panel class to instantiate.
+            PanelClass (Callable[[], QWidget]): Panel class or factory to instantiate.
         """
         mw = self.main_window
         module_id = manifest["id"]

@@ -26,7 +26,10 @@ class _MockNetworkUpdater:
         # Any plugin id "exists" — the point of these tests is routing after
         # install, not the registry lookup itself.
         return {
-            "plugins": {"flow_cytometry": {"version": "1.0.0"}, "test_plugin": {"version": "1.0.0"}}
+            "plugins": {
+                "flow_cytometry": {"version": "1.0.0", "repo_url": "mock://repo"},
+                "test_plugin": {"version": "1.0.0", "repo_url": "mock://repo"},
+            }
         }
 
     def install_plugin(self, plugin_id: str, plugin_info: dict[str, Any]) -> tuple[bool, str]:  # noqa: ARG002
@@ -58,6 +61,18 @@ class _FakeCoreServicesServer:
 
 def _patch_install(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("karcytics.core.network_updater.NetworkUpdater", _MockNetworkUpdater)
+    monkeypatch.setattr(
+        "karcytics.core.network.plugin_registry_fetcher.PluginRegistryFetcher.fetch",
+        lambda *args: {"project": {"name": "test"}},
+    )
+    monkeypatch.setattr(
+        "karcytics.core.network.plugin_registry_fetcher.PluginRegistryFetcher.enrich_entry",
+        lambda *args: None,
+    )
+    monkeypatch.setattr(
+        "karcytics.core.network.plugin_registry_fetcher.PluginRegistryFetcher.resolve_download_url",
+        lambda *args: "mock://download",
+    )
 
 
 def _patch_core_services(monkeypatch: pytest.MonkeyPatch) -> _FakeCoreServicesServer:
