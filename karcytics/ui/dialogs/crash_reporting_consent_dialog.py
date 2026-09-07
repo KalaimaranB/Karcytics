@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from karcytics.core import crash_reporting
@@ -22,7 +23,7 @@ from karcytics.ui.theme import Colors, Fonts, theme_manager
 class CrashReportingConsentDialog(QDialog):
     """Yes/No opt-in dialog for crash reporting — shown once on first launch."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Help Improve Karcytics")
         self.setMinimumSize(520, 380)
@@ -33,7 +34,7 @@ class CrashReportingConsentDialog(QDialog):
 
         theme_manager.theme_changed.connect(self._apply_styles)
 
-    def _setup_ui(self):  # noqa: PLR0915
+    def _setup_ui(self) -> None:  # noqa: PLR0915
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 28)
         layout.setSpacing(18)
@@ -84,15 +85,15 @@ class CrashReportingConsentDialog(QDialog):
         btn_layout.addWidget(self.enable_btn)
         layout.addLayout(btn_layout)
 
-    def _on_enable(self):
+    def _on_enable(self) -> None:
         crash_reporting.set_consent(True)
         self.accept()
 
-    def _on_decline(self):
+    def _on_decline(self) -> None:
         crash_reporting.set_consent(False)
         self.reject()
 
-    def _apply_styles(self):
+    def _apply_styles(self) -> None:
         theme_manager.apply_style(self.title_label, f"color: {Colors.FG_PRIMARY};")
         theme_manager.apply_style(self.body_label, f"color: {Colors.FG_SECONDARY};")
         theme_manager.apply_style(

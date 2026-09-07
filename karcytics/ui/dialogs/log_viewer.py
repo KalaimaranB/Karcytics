@@ -16,6 +16,9 @@ from PyQt6.QtWidgets import (
 from karcytics.core.config import AppConfig
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
+_SELECTOR_PADDING = "6px 10px"
+_SELECTOR_RADIUS = "4px"
+
 
 class LogViewerDialog(QDialog):
     """A dialog to browse the core, IPC, and per-plugin log files."""
@@ -97,8 +100,8 @@ class LogViewerDialog(QDialog):
                 background-color: {Colors.BG_DARK};
                 color: {Colors.FG_PRIMARY};
                 border: 1px solid {Colors.BORDER};
-                padding: 6px 10px;
-                border-radius: 4px;
+                padding: {_SELECTOR_PADDING};
+                border-radius: {_SELECTOR_RADIUS};
             }}
         """,
         )
@@ -106,7 +109,7 @@ class LogViewerDialog(QDialog):
     def _logs_dir(self) -> Path:
         return AppConfig.APP_DATA_DIR / "logs"
 
-    def _populate_sources(self):
+    def _populate_sources(self) -> None:
         logs_dir = self._logs_dir()
         self.source_selector.blockSignals(True)
         self.source_selector.clear()
@@ -118,7 +121,7 @@ class LogViewerDialog(QDialog):
                 self.source_selector.addItem(f"Plugin: {log_file.stem}", log_file)
         self.source_selector.blockSignals(False)
 
-    def _refresh(self):
+    def _refresh(self) -> None:
         current_path = self.source_selector.currentData()
         self._populate_sources()
         if current_path is not None:
@@ -127,7 +130,7 @@ class LogViewerDialog(QDialog):
                 self.source_selector.setCurrentIndex(idx)
         self._load_logs()
 
-    def _load_logs(self):
+    def _load_logs(self) -> None:
         log_file = self.source_selector.currentData()
         if log_file is None:
             self.text_area.setPlainText("No log source selected.")

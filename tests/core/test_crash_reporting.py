@@ -1,3 +1,4 @@
+import typing
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -6,13 +7,13 @@ from karcytics.core import crash_reporting
 
 
 class _FakePreferences:
-    def __init__(self):
-        self.data = {}
+    def __init__(self) -> None:
+        self.data: dict[str, typing.Any] = {}
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: typing.Any = None) -> typing.Any:
         return self.data.get(key, default)
 
-    def set(self, key, value):
+    def set(self, key: str, value: typing.Any) -> None:
         self.data[key] = value
 
 
@@ -30,46 +31,46 @@ def _isolated_state(monkeypatch):
 
 
 class TestConsent:
-    def test_consent_defaults_to_undecided(self):
+    def test_consent_defaults_to_undecided(self) -> None:
         assert crash_reporting.is_consent_given() is None
 
-    def test_set_consent_true_persists_and_is_read_back(self, monkeypatch):
+    def test_set_consent_true_persists_and_is_read_back(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "get_configured_dsn", lambda: None)
         crash_reporting.set_consent(True)
         assert crash_reporting.is_consent_given() is True
 
-    def test_set_consent_false_persists_and_is_read_back(self):
+    def test_set_consent_false_persists_and_is_read_back(self) -> None:
         crash_reporting.set_consent(False)
         assert crash_reporting.is_consent_given() is False
 
 
 class TestGetConfiguredDsn:
-    def test_returns_none_when_not_frozen_regardless_of_env(self, monkeypatch):
+    def test_returns_none_when_not_frozen_regardless_of_env(self, monkeypatch) -> None:
         """Source-tree runs must never return a DSN, even if the env var is set."""
         monkeypatch.setenv("KARCYTICS_SENTRY_DSN", "https://example.invalid/1")
         # sys.frozen is not set in test runs — get_configured_dsn must return None.
         assert crash_reporting.get_configured_dsn() is None
 
-    def test_returns_env_value_when_frozen(self, monkeypatch):
+    def test_returns_env_value_when_frozen(self, monkeypatch) -> None:
         monkeypatch.setenv("KARCYTICS_SENTRY_DSN", "https://example.invalid/1")
         monkeypatch.setattr(crash_reporting.sys, "frozen", True, raising=False)
         assert crash_reporting.get_configured_dsn() == "https://example.invalid/1"
 
-    def test_returns_none_when_frozen_but_env_unset(self, monkeypatch):
+    def test_returns_none_when_frozen_but_env_unset(self, monkeypatch) -> None:
         monkeypatch.delenv("KARCYTICS_SENTRY_DSN", raising=False)
         monkeypatch.setattr(crash_reporting.sys, "frozen", True, raising=False)
         assert crash_reporting.get_configured_dsn() is None
 
 
 class TestInitCrashReporting:
-    def test_noop_without_a_configured_dsn(self, monkeypatch):
+    def test_noop_without_a_configured_dsn(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "get_configured_dsn", lambda: None)
         crash_reporting.set_consent(True)
 
         assert crash_reporting.init_crash_reporting() is False
         assert crash_reporting.is_active() is False
 
-    def test_noop_without_consent(self, monkeypatch):
+    def test_noop_without_consent(self, monkeypatch) -> None:
         monkeypatch.setattr(
             crash_reporting, "get_configured_dsn", lambda: "https://example.invalid/1"
         )
@@ -77,14 +78,17 @@ class TestInitCrashReporting:
         assert crash_reporting.init_crash_reporting() is False
         assert crash_reporting.is_active() is False
 
-    def test_initializes_sentry_when_dsn_and_consent_both_present(self, monkeypatch):
+    def test_initializes_sentry_when_dsn_and_consent_both_present(self, monkeypatch) -> None:
         monkeypatch.setattr(
             crash_reporting, "get_configured_dsn", lambda: "https://example.invalid/1"
         )
         crash_reporting.core_preferences.set(crash_reporting.CONSENT_PREFERENCE_KEY, True)
 
         mock_sentry = MagicMock()
-        with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
+        with patch.dict(
+            "sys.modules",
+            {"sentry_sdk": mock_sentry, "sentry_sdk.integrations.logging": MagicMock()},
+        ):
             assert crash_reporting.init_crash_reporting() is True
 
         assert crash_reporting.is_active() is True
@@ -98,22 +102,28 @@ class TestInitCrashReporting:
         assert kwargs["max_breadcrumbs"] == 50
         assert "environment" in kwargs
 
-    def test_set_consent_true_triggers_init_when_dsn_configured(self, monkeypatch):
+    def test_set_consent_true_triggers_init_when_dsn_configured(self, monkeypatch) -> None:
         monkeypatch.setattr(
             crash_reporting, "get_configured_dsn", lambda: "https://example.invalid/1"
         )
         mock_sentry = MagicMock()
-        with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
+        with patch.dict(
+            "sys.modules",
+            {"sentry_sdk": mock_sentry, "sentry_sdk.integrations.logging": MagicMock()},
+        ):
             crash_reporting.set_consent(True)
 
         assert crash_reporting.is_active() is True
 
-    def test_set_consent_false_shuts_down_an_active_client(self, monkeypatch):
+    def test_set_consent_false_shuts_down_an_active_client(self, monkeypatch) -> None:
         monkeypatch.setattr(
             crash_reporting, "get_configured_dsn", lambda: "https://example.invalid/1"
         )
         mock_sentry = MagicMock()
-        with patch.dict("sys.modules", {"sentry_sdk": mock_sentry}):
+        with patch.dict(
+            "sys.modules",
+            {"sentry_sdk": mock_sentry, "sentry_sdk.integrations.logging": MagicMock()},
+        ):
             crash_reporting.set_consent(True)
             assert crash_reporting.is_active() is True
 
@@ -123,7 +133,7 @@ class TestInitCrashReporting:
 
 
 class TestScrubbing:
-    def test_scrubs_home_directory_occurrences(self):
+    def test_scrubs_home_directory_occurrences(self) -> None:
         from pathlib import Path
 
         home = str(Path.home())
@@ -131,15 +141,30 @@ class TestScrubbing:
         assert home not in result
         assert "<home>" in result
 
-    def test_scrubs_absolute_path_ending_in_data_extension(self):
+    def test_scrubs_absolute_path_ending_in_data_extension(self) -> None:
         result = crash_reporting._scrub_value("failed to parse /Volumes/Data/PatientX_Sample3.fcs")
         assert "PatientX_Sample3.fcs" not in result
         assert "<redacted-file>" in result
 
-    def test_leaves_unrelated_strings_untouched(self):
+    def test_scrubs_windows_paths_with_spaces_and_slashes(self) -> None:
+        result_fwd = crash_reporting._scrub_value(
+            "loaded C:/Users/Jane Doe/Patient.fcs successfully"
+        )
+        assert "Patient.fcs" not in result_fwd
+        assert "Jane Doe" not in result_fwd
+        assert "<redacted-file>" in result_fwd
+
+        result_back = crash_reporting._scrub_value(
+            "loaded C:\\Users\\Jane Doe\\Patient.fcs successfully"
+        )
+        assert "Patient.fcs" not in result_back
+        assert "Jane Doe" not in result_back
+        assert "<redacted-file>" in result_back
+
+    def test_leaves_unrelated_strings_untouched(self) -> None:
         assert crash_reporting._scrub_value("division by zero") == "division by zero"
 
-    def test_recurses_into_nested_dicts_and_lists(self):
+    def test_recurses_into_nested_dicts_and_lists(self) -> None:
         from pathlib import Path
 
         home = str(Path.home())
@@ -155,7 +180,7 @@ class TestScrubbing:
         assert home not in result["breadcrumbs"][0]["message"]
         assert result["message"] == "boom"
 
-    def test_before_send_applies_scrubbing(self):
+    def test_before_send_applies_scrubbing(self) -> None:
         from pathlib import Path
 
         home = str(Path.home())
@@ -167,24 +192,24 @@ class TestScrubbing:
 
 
 class TestPluginVersion:
-    def test_returns_none_without_a_registered_module_manager(self):
+    def test_returns_none_without_a_registered_module_manager(self) -> None:
         assert crash_reporting._plugin_version("flow_cytometry") is None
 
-    def test_returns_none_for_an_unknown_plugin_id(self, monkeypatch):
+    def test_returns_none_for_an_unknown_plugin_id(self, monkeypatch) -> None:
         mock_manager = MagicMock()
         mock_manager.modules = {}
         monkeypatch.setattr(crash_reporting, "_module_manager", mock_manager)
 
         assert crash_reporting._plugin_version("flow_cytometry") is None
 
-    def test_resolves_version_from_the_module_manager(self, monkeypatch):
+    def test_resolves_version_from_the_module_manager(self, monkeypatch) -> None:
         mock_manager = MagicMock()
         mock_manager.modules = {"flow_cytometry": {"version": "1.4.0"}}
         monkeypatch.setattr(crash_reporting, "_module_manager", mock_manager)
 
         assert crash_reporting._plugin_version("flow_cytometry") == "1.4.0"
 
-    def test_set_module_manager_registers_it(self):
+    def test_set_module_manager_registers_it(self) -> None:
         # Calls the real function rather than monkeypatching the attribute
         # directly — safe to leave set after this test, since the autouse
         # fixture above resets it to None at the *start* of every test
@@ -200,12 +225,12 @@ class TestPluginVersion:
 class TestCaptureError:
     """Tests for the unified capture_error() function (and its capture_fatal_error wrapper)."""
 
-    def test_noop_when_not_active(self):
+    def test_noop_when_not_active(self) -> None:
         # is_active() is False by default in this isolated fixture — must
         # not raise or try to import sentry_sdk at all.
         crash_reporting.capture_error("boom", None, None, None)
 
-    def test_captures_live_exception_when_available(self, monkeypatch):
+    def test_captures_live_exception_when_available(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
@@ -219,7 +244,7 @@ class TestCaptureError:
         mock_sentry.capture_exception.assert_called_once_with(exc)
         mock_sentry.capture_message.assert_not_called()
 
-    def test_uses_provided_level_for_message_capture(self, monkeypatch):
+    def test_uses_provided_level_for_message_capture(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
@@ -230,7 +255,7 @@ class TestCaptureError:
 
         mock_sentry.capture_message.assert_called_once_with("info msg", level="warning")
 
-    def test_capture_fatal_error_delegates_with_fatal_level(self, monkeypatch):
+    def test_capture_fatal_error_delegates_with_fatal_level(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
@@ -245,7 +270,7 @@ class TestCaptureError:
         mock_sentry.capture_message.assert_called_once_with("remote failure", level="fatal")
         mock_sentry.capture_exception.assert_not_called()
 
-    def test_tags_plugin_version_when_resolvable(self, monkeypatch):
+    def test_tags_plugin_version_when_resolvable(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_manager = MagicMock()
         mock_manager.modules = {"flow_cytometry": {"version": "1.4.0"}}
@@ -262,7 +287,7 @@ class TestCaptureError:
         mock_scope.set_tag.assert_any_call("plugin_id", "flow_cytometry")
         mock_scope.set_tag.assert_any_call("plugin_version", "1.4.0")
 
-    def test_capture_error_nonfatal_uses_error_level_by_default(self, monkeypatch):
+    def test_capture_error_nonfatal_uses_error_level_by_default(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
@@ -275,11 +300,11 @@ class TestCaptureError:
 
 
 class TestCaptureErrorData:
-    def test_returns_false_and_sends_nothing_when_not_active(self):
+    def test_returns_false_and_sends_nothing_when_not_active(self) -> None:
         sent = crash_reporting.capture_error_data({"message": "boom"})
         assert sent is False
 
-    def test_sends_message_and_traceback_from_error_data_dict(self, monkeypatch):
+    def test_sends_message_and_traceback_from_error_data_dict(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
@@ -301,7 +326,7 @@ class TestCaptureErrorData:
         )
         mock_sentry.capture_message.assert_called_once_with("bad transform", level="error")
 
-    def test_omits_plugin_tag_and_traceback_extra_when_absent(self, monkeypatch):
+    def test_omits_plugin_tag_and_traceback_extra_when_absent(self, monkeypatch) -> None:
         monkeypatch.setattr(crash_reporting, "_initialized", True)
         mock_sentry = MagicMock()
         mock_scope = MagicMock()
@@ -313,3 +338,37 @@ class TestCaptureErrorData:
         mock_scope.set_tag.assert_not_called()
         mock_scope.set_extra.assert_not_called()
         mock_sentry.capture_message.assert_called_once_with("core-only failure", level="error")
+
+
+def test_diagnostic_error_produces_exactly_one_sentry_event(monkeypatch) -> None:
+    """Integration test to verify that the sentry_sdk LoggingIntegration configuration
+    prevents DiagnosticEngine's logger.error() calls from creating duplicate events alongside
+    the explicit capture_error() call.
+    """
+    from karcytics.core import crash_reporting
+    from karcytics.core.diagnostics import DiagnosticEngine
+
+    events_captured = []
+
+    def capture_event(event, hint):
+        events_captured.append(event)
+        return  # Prevent actual transmission
+
+    monkeypatch.setattr(crash_reporting, "_before_send", capture_event)
+    monkeypatch.setattr(crash_reporting, "get_configured_dsn", lambda: "http://public@localhost/1")
+    crash_reporting.core_preferences.set(crash_reporting.CONSENT_PREFERENCE_KEY, True)
+
+    crash_reporting.init_crash_reporting()
+
+    try:
+        engine = DiagnosticEngine()
+        engine._last_error_time = 0.0
+
+        try:
+            raise ValueError("Test Error")
+        except ValueError as e:
+            engine.report_error("A failure message", exception=e)
+
+        assert len(events_captured) == 1
+    finally:
+        crash_reporting.shutdown_crash_reporting()

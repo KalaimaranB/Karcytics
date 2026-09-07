@@ -179,7 +179,7 @@ class PackageManager:
         plugin_dir: Path,
         progress_callback: Callable[[int], None] | None = None,
         log_callback: Callable[[str], None] | None = None,
-    ):
+    ) -> None:
         """Install the plugin's dependencies into its standalone virtual environment.
 
         Parameters:
@@ -242,17 +242,27 @@ class PackageManager:
             install_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **sp_kwargs
         )
 
+        from collections import deque
+
+        output_tail: deque[str] = deque(maxlen=50)
+
         if process.stdout:
             for line in process.stdout:
                 line = line.strip()
-                if line and log_callback:
+                if not line:
+                    continue
+                output_tail.append(line)
+                if log_callback:
                     log_callback(line)
 
         process.wait()
         if process.returncode != 0:
             cmd_str = " ".join(install_cmd)
+            tail_str = "\n".join(output_tail) if output_tail else "<no output captured>"
             raise RuntimeError(
-                f"Failed to install dependencies (code {process.returncode})\nCommand: {cmd_str}"
+                f"Failed to install dependencies (code {process.returncode})\n"
+                f"Command: {cmd_str}\n"
+                f"Output Tail:\n{tail_str}"
             )
 
         if log_callback:

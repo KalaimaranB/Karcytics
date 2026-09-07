@@ -1,6 +1,6 @@
 """Premium Error Reporting Dialog for Karcytics."""
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QDialog,
@@ -28,6 +28,23 @@ _ERROR_APPEARANCE: dict[tuple[bool, bool], tuple[str, str, str]] = {
 }
 
 
+_DIALOG_MIN_WIDTH = 620
+_DIALOG_MIN_HEIGHT = 460
+
+
+class ReportSenderWorker(QThread):
+    finished = pyqtSignal(bool)
+
+    def __init__(self, error_data: dict, user_comments: str):
+        super().__init__()
+        self.error_data = error_data
+        self.user_comments = user_comments
+
+    def run(self) -> None:
+        success = crash_reporting.send_user_report(self.error_data, self.user_comments)
+        self.finished.emit(bool(success))
+
+
 class ErrorReportDialog(QDialog):
     """A sleek, theme-aware dialog for displaying system errors and tracebacks."""
 
@@ -35,7 +52,7 @@ class ErrorReportDialog(QDialog):
         super().__init__(parent)
         self.error_data = error_data
         self.setWindowTitle("System Alert — Karcytics Diagnostic")
-        self.setMinimumSize(620, 460)
+        self.setMinimumSize(_DIALOG_MIN_WIDTH, _DIALOG_MIN_HEIGHT)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
 
         self._setup_ui()
@@ -188,13 +205,17 @@ class ErrorReportDialog(QDialog):
         """,
         )
 
-    def _send_report(self):
+    def _send_report(self) -> None:
         self.send_btn.setEnabled(False)
         self.send_btn.setText("Sending...")
 
         user_comments = self.comments_area.toPlainText().strip()
-        success = crash_reporting.send_user_report(self.error_data, user_comments)
 
+        self.worker = ReportSenderWorker(self.error_data, user_comments)
+        self.worker.finished.connect(self._on_report_finished)
+        self.worker.start()
+
+    def _on_report_finished(self, success: bool) -> None:
         if success:
             self.send_btn.setText("Sent!")
             theme_manager.apply_style(

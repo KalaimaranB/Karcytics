@@ -164,7 +164,8 @@ class DiagnosticEngine:
         import time
 
         now = time.time()
-        error_sig = f"{message}|{str(exception)}"
+        exc_str = str(exception) if exception else exception_repr
+        error_sig = f"{message}|{exc_str}"
 
         # Throttle identical errors to max 1 per 2 seconds to prevent dialog storms
         if self._last_error_sig == error_sig and (now - self._last_error_time) < 2.0:

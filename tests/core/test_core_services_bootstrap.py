@@ -119,7 +119,7 @@ def test_diagnostics_report_error_handler_forwards_to_diagnostic_engine():
     )
 
 
-def test_diagnostics_report_error_handler_forwards_remote_exception_and_traceback():
+def test_diagnostics_report_error_handler_forwards_remote_exception_and_traceback() -> None:
     """The RPC path (used by ui_daemon_runtime.py's theme-gate failure and any
     future remote caller) has no live exception object to hand over — only
     already-formatted strings, which must reach DiagnosticEngine.report_error
@@ -610,7 +610,7 @@ def test_event_unsubscribe_handler_keeps_topic_registered_for_remaining_plugins(
     assert _event_subscriptions["MODULE_OPENED"] == {"another_plugin"}
 
 
-def test_forward_event_to_subscribed_plugins_only_calls_daemons_that_subscribed():
+def test_forward_event_to_subscribed_plugins_only_calls_daemons_that_subscribed() -> None:
     """Exercises `_forward_event_to_subscribed_plugins` (what the Hub's real
     `event_bus.emit()` ultimately calls) directly against a fake daemon
     registry, so the fan-out logic itself is covered without needing a real
@@ -622,7 +622,9 @@ def test_forward_event_to_subscribed_plugins_only_calls_daemons_that_subscribed(
     called_with: dict = {}
     done = threading.Event()
 
-    def _fake_daemon_call(method, kwargs):
+    import typing
+
+    def _fake_daemon_call(method: str, kwargs: dict[str, typing.Any]) -> None:
         called_with["method"] = method
         called_with["kwargs"] = kwargs
         done.set()

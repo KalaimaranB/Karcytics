@@ -50,9 +50,13 @@ logger = logging.getLogger(__name__)
 CONSENT_PREFERENCE_KEY = "diagnostics.crash_reporting_enabled"
 _DSN_ENV_VAR = "KARCYTICS_SENTRY_DSN"
 
+_SENTRY_TRACES_SAMPLE_RATE = 0.0
+_SENTRY_MAX_BREADCRUMBS = 50
+_SENTRY_FLUSH_TIMEOUT_SEC = 5.0
+
 _DATA_FILE_EXTENSIONS = r"(?:fcs|csv|tsv|xlsx?|karcytics|png|jpe?g|tiff?|json)"
 _PATH_LIKE_RE = re.compile(
-    rf"(?:[A-Za-z]:\\|~?/)[^\s\"']*?\.{_DATA_FILE_EXTENSIONS}\b", re.IGNORECASE
+    rf"(?:[A-Za-z]:[\\/]|~?/)[^\"'\n]*?\.{_DATA_FILE_EXTENSIONS}\b", re.IGNORECASE
 )
 
 _initialized = False
@@ -175,15 +179,23 @@ def init_crash_reporting() -> bool:
     # clarity in the Sentry dashboard.
     environment = "production" if getattr(sys, "frozen", False) else "development"
 
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    # Capture log messages as breadcrumbs (INFO and above) but do NOT
+    # auto-capture events from logs — we manually capture them via
+    # capture_error to ensure rich context and avoid duplicates.
+    sentry_logging = LoggingIntegration(level=logging.INFO, event_level=None)
+
     sentry_sdk.init(
         dsn=dsn,
         release=f"karcytics@{AppConfig.CORE_VERSION}",
         environment=environment,
         send_default_pii=False,
         include_local_variables=False,
-        traces_sample_rate=0.0,
-        max_breadcrumbs=50,
+        traces_sample_rate=_SENTRY_TRACES_SAMPLE_RATE,
+        max_breadcrumbs=_SENTRY_MAX_BREADCRUMBS,
         before_send=_before_send,  # type: ignore[arg-type]
+        integrations=[sentry_logging],
     )
     _initialized = True
     logger.info("Crash reporting initialized (environment=%s).", environment)
@@ -353,7 +365,7 @@ def send_user_report(error_data: dict[str, Any], user_comments: str) -> bool:
         event = _scrub_value(event)
 
         client.capture_event(event)  # type: ignore[arg-type]
-        client.flush(timeout=5.0)
+        client.flush(timeout=_SENTRY_FLUSH_TIMEOUT_SEC)
         return True
     except Exception as e:
         logger.error(f"Failed to send user report to Sentry: {e}")

@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from typing import Any, Final
 
+_CONSENT_DIALOG_DELAY_MS: Final[int] = 800
+
 
 # --- STABILIZATION: Bootstrap Logging ---
 # This MUST happen before any wasm/karcytics imports
@@ -765,9 +767,14 @@ def _start_application(log_file: Path) -> None:
         set_module_manager(module_manager)
         init_crash_reporting()
 
+        event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, _on_error_event)
+        install_exception_hook()
+
+        app = KarcyticsApp(module_manager, updater, core_services_server=core_services_server)
+
         # Show the first-run consent dialog once if the user hasn't made a
         # choice yet and this is a production build with a DSN configured.
-        # The 800 ms delay lets the main window appear first so the dialog
+        # The delay lets the main window appear first so the dialog
         # doesn't flash before the UI is ready.
         from PyQt6.QtCore import QTimer
 
@@ -780,12 +787,8 @@ def _start_application(log_file: Path) -> None:
 
                 CrashReportingConsentDialog().exec()
 
-            QTimer.singleShot(800, _show_consent_dialog)
+            QTimer.singleShot(_CONSENT_DIALOG_DELAY_MS, _show_consent_dialog)
 
-        event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, _on_error_event)
-        install_exception_hook()
-
-        app = KarcyticsApp(module_manager, updater, core_services_server=core_services_server)
         app.run()
     except Exception as e:
         import traceback

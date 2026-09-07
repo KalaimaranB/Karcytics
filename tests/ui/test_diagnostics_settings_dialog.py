@@ -85,9 +85,14 @@ def test_send_test_event_calls_capture_error_data(qapp, monkeypatch):  # noqa: A
         lambda: True,
     )
     sent = []
+
+    def mock_capture(data: dict) -> bool:
+        sent.append(data)
+        return True
+
     monkeypatch.setattr(
         "karcytics.ui.dialogs.diagnostics_settings_dialog.crash_reporting.capture_error_data",
-        lambda data: sent.append(data) or True,
+        mock_capture,
     )
 
     dialog = DiagnosticsSettingsDialog()

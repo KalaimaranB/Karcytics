@@ -1,16 +1,18 @@
 import logging
+from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
 from karcytics.core.logging_setup import configure_logging
 
 
-def _read(path):
+def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
 @pytest.fixture(autouse=True)
-def _restore_root_logger():
+def _restore_root_logger() -> Generator[None, None, None]:
     """configure_logging() replaces all root handlers process-wide.
 
     Left unrestored, that permanently strips whatever handlers other code
@@ -32,7 +34,7 @@ def _restore_root_logger():
         root.setLevel(original_level)
 
 
-def test_configure_logging_routes_core_ipc_and_plugin_records(tmp_path):
+def test_configure_logging_routes_core_ipc_and_plugin_records(tmp_path: Path) -> None:
     core_log = configure_logging(tmp_path)
     logs_dir = tmp_path / "logs"
 
@@ -75,7 +77,7 @@ def test_configure_logging_routes_core_ipc_and_plugin_records(tmp_path):
     assert "ready handshake ok" not in plugin_content
 
 
-def test_configure_logging_separates_multiple_plugins(tmp_path):
+def test_configure_logging_separates_multiple_plugins(tmp_path: Path) -> None:
     configure_logging(tmp_path)
     logs_dir = tmp_path / "logs"
 

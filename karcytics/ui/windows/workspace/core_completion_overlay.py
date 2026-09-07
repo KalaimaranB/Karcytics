@@ -4,8 +4,29 @@ import random
 from karcytics_sdk.plugin.effects import apply_glow_effect
 from karcytics_sdk.plugin.theme_fallback import Colors
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QPainter, QPen
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
+
+# Animation and Layout Constants
+NODE_COUNT = 50
+NODE_MIN_VELOCITY = -0.0015
+NODE_MAX_VELOCITY = 0.0015
+ANIMATION_TIMER_MS = 40
+CARD_WIDTH = 650
+CARD_HEIGHT = 480
+TITLE_FONT_SIZE = 28
+MESSAGE_FONT_SIZE = 14
+CERT_FONT_SIZE = 12
+BADGE_FONT_SIZE = 20
+BUTTON_FONT_SIZE = 14
+NODE_CONNECTION_DIST_SQ = 10000
+
+# Color Constants
+CARD_BG_COLOR = "#11151c"
+CARD_BORDER_COLOR = "#2a3545"
+MESSAGE_TEXT_COLOR = "#CCCCCC"
+CERT_TEXT_COLOR = "#888888"
+OVERLAY_BG_COLOR = (10, 12, 16, 235)
 
 
 class CoreCourseCompleteOverlay(QWidget):
@@ -20,19 +41,19 @@ class CoreCourseCompleteOverlay(QWidget):
 
         # Background nodes for tech effect
         self._nodes = []
-        for _ in range(50):
+        for _ in range(NODE_COUNT):
             self._nodes.append(
                 {
                     "x": random.uniform(0, 1),
                     "y": random.uniform(0, 1),
-                    "vx": random.uniform(-0.0015, 0.0015),
-                    "vy": random.uniform(-0.0015, 0.0015),
+                    "vx": random.uniform(NODE_MIN_VELOCITY, NODE_MAX_VELOCITY),
+                    "vy": random.uniform(NODE_MIN_VELOCITY, NODE_MAX_VELOCITY),
                 }
             )
 
         self._bg_timer = QTimer(self)
         self._bg_timer.timeout.connect(self._update_bg)
-        self._bg_timer.setInterval(40)
+        self._bg_timer.setInterval(ANIMATION_TIMER_MS)
 
         self._setup_ui()
 
@@ -51,13 +72,13 @@ class CoreCourseCompleteOverlay(QWidget):
         self._card = QFrame()
         self._card.setObjectName("CoreCompleteCard")
         self._card.setStyleSheet(
-            "QFrame#CoreCompleteCard { background-color: #11151c; border: 1px solid #2a3545; border-radius: 12px; }"
+            f"QFrame#CoreCompleteCard {{ background-color: {CARD_BG_COLOR}; border: 1px solid {CARD_BORDER_COLOR}; border-radius: 12px; }}"
         )
 
         # Add a prominent glow effect
         apply_glow_effect(self._card, QColor(Colors.ACCENT_PRIMARY).darker(150), blur_radius=80)
 
-        self._card.setFixedSize(650, 480)
+        self._card.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
 
         card_layout = QVBoxLayout(self._card)
         card_layout.setContentsMargins(50, 50, 50, 50)
@@ -70,7 +91,7 @@ class CoreCourseCompleteOverlay(QWidget):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         font = title.font()
-        font.setPointSize(28)
+        font.setPointSize(TITLE_FONT_SIZE)
         font.setBold(True)
         title.setFont(font)
         title.setStyleSheet(f"color: {Colors.ACCENT_PRIMARY};")
@@ -83,9 +104,9 @@ class CoreCourseCompleteOverlay(QWidget):
         self._message_label.setWordWrap(True)
         self._message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         msg_font = self._message_label.font()
-        msg_font.setPointSize(14)
+        msg_font.setPointSize(MESSAGE_FONT_SIZE)
         self._message_label.setFont(msg_font)
-        self._message_label.setStyleSheet("color: #CCCCCC;")
+        self._message_label.setStyleSheet(f"color: {MESSAGE_TEXT_COLOR};")
 
         card_layout.addWidget(self._message_label)
         card_layout.addSpacing(20)
@@ -99,16 +120,16 @@ class CoreCourseCompleteOverlay(QWidget):
         cert_label.setObjectName("CoreCompleteCertLabel")
         cert_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cert_font = cert_label.font()
-        cert_font.setPointSize(12)
+        cert_font.setPointSize(CERT_FONT_SIZE)
         cert_font.setBold(True)
         cert_label.setFont(cert_font)
-        cert_label.setStyleSheet("color: #888888; letter-spacing: 2px;")
+        cert_label.setStyleSheet(f"color: {CERT_TEXT_COLOR}; letter-spacing: 2px;")
 
         self._badge_label = QLabel("Badge Name")
         self._badge_label.setObjectName("CoreCompleteBadgeLabel")
         self._badge_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge_font = self._badge_label.font()
-        badge_font.setPointSize(20)
+        badge_font.setPointSize(BADGE_FONT_SIZE)
         badge_font.setBold(True)
         self._badge_label.setFont(badge_font)
         self._badge_label.setStyleSheet(f"color: {Colors.DNA_SECONDARY};")
@@ -127,7 +148,7 @@ class CoreCourseCompleteOverlay(QWidget):
         self._continue_btn.setMinimumHeight(50)
 
         btn_font = self._continue_btn.font()
-        btn_font.setPointSize(14)
+        btn_font.setPointSize(BUTTON_FONT_SIZE)
         btn_font.setBold(True)
         self._continue_btn.setFont(btn_font)
         self._continue_btn.setStyleSheet(
@@ -140,7 +161,7 @@ class CoreCourseCompleteOverlay(QWidget):
 
         main_layout.addWidget(self._card)
 
-    def _update_bg(self):
+    def _update_bg(self) -> None:
         """Update the animated background node positions and schedule the overlay for repainting."""
         for n in self._nodes:
             n["x"] += n["vx"]
@@ -151,12 +172,12 @@ class CoreCourseCompleteOverlay(QWidget):
                 n["vy"] *= -1
         self.update()
 
-    def paintEvent(self, event) -> None:  # noqa: ARG002, N802
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: ARG002, N802
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # Base overlay (darker than usual)
-        painter.fillRect(self.rect(), QColor(10, 12, 16, 235))
+        painter.fillRect(self.rect(), QColor(*OVERLAY_BG_COLOR))
 
         w, h = self.width(), self.height()
         base_color = QColor(Colors.ACCENT_PRIMARY)
@@ -180,7 +201,7 @@ class CoreCourseCompleteOverlay(QWidget):
                 n2 = self._nodes[j]
                 x2, y2 = n2["x"] * w, n2["y"] * h
                 dist_sq = (x1 - x2) ** 2 + (y1 - y2) ** 2
-                if dist_sq < 10000:  # ~100px radius
+                if dist_sq < NODE_CONNECTION_DIST_SQ:  # ~100px radius
                     painter.drawLine(int(x1), int(y1), int(x2), int(y2))
 
     def _on_continue(self) -> None:

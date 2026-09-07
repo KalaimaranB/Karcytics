@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -328,7 +329,9 @@ class PluginRegistryFetcher:
         return True
 
     @classmethod
-    def fetch_all(cls, store_inventory: dict[str, Any]) -> dict[str, Any]:
+    def fetch_all(  # noqa: C901
+        cls, store_inventory: dict[str, Any], cancel_check: Callable[[], bool] | None = None
+    ) -> dict[str, Any]:  # noqa: C901
         """Eagerly fetch, enrich, and resolve an install URL for all plugins in parallel.
 
         For each entry that contains a ``repo_url``, derives the ``pyproject.toml``
@@ -362,6 +365,10 @@ class PluginRegistryFetcher:
         with ThreadPoolExecutor(max_workers=min(8, len(to_fetch))) as executor:
             futures = {executor.submit(_fetch_one, args): args[0] for args in to_fetch}
             for future in as_completed(futures):
+                if cancel_check and cancel_check():
+                    for f in futures:
+                        f.cancel()
+                    return {}
                 plugin_id = futures[future]
                 try:
                     if cls._apply_fetch_result(store_inventory, future.result()):

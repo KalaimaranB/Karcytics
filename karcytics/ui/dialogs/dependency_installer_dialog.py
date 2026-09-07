@@ -18,6 +18,10 @@ from karcytics.ui.workers.plugin_dependency_installer import PluginDependencyIns
 logger = logging.getLogger(__name__)
 
 
+_DIALOG_WIDTH = 600
+_DIALOG_HEIGHT = 400
+
+
 class DependencyInstallerDialog(QDialog):
     """Dialog that shows progress while installing python dependencies for a plugin."""
 
@@ -27,7 +31,7 @@ class DependencyInstallerDialog(QDialog):
         self.plugin_name = plugin_name
 
         self.setWindowTitle(f"Installing Dependencies - {self.plugin_name}")
-        self.setFixedSize(600, 400)
+        self.setFixedSize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         # Prevent closing during install
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowCloseButtonHint)
@@ -75,7 +79,10 @@ class DependencyInstallerDialog(QDialog):
 
         layout.addLayout(btn_layout)
 
-    def start_installation(self):
+    def start_installation(self) -> None:
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowCloseButtonHint)
+        self.show()
+
         self.retry_btn.hide()
         self.close_btn.hide()
         self.progress_bar.setRange(0, 0)
@@ -88,17 +95,17 @@ class DependencyInstallerDialog(QDialog):
         self.worker.finished.connect(self.on_finished)
         self.worker.start()
 
-    def on_progress(self, value):
+    def on_progress(self, value: int) -> None:
         if value == 100:
             self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(100)
 
-    def on_log_message(self, message: str):
+    def on_log_message(self, message: str) -> None:
         self.log_console.appendPlainText(message)
         scrollbar = self.log_console.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def on_finished(self, success: bool, message: str):
+    def on_finished(self, success: bool, message: str) -> None:
         if success:
             self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(100)

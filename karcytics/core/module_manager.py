@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -124,7 +125,7 @@ class ModuleManager:
 
     def _load_inprocess_module_ui(
         self, module_id: str, mod_info: dict[str, Any]
-    ) -> type[QWidget] | None:
+    ) -> Callable[[], QWidget] | None:
         """Load UI for an in-process plugin with environment priority and isolation tracking."""
         # Inject path dynamically before loading
         site_packages = PluginEnvironmentInjector.inject_path(
@@ -173,14 +174,15 @@ class ModuleManager:
 
         return result
 
-    def load_module_ui(self, module_id: str) -> type[QWidget] | None:
+    def load_module_ui(self, module_id: str) -> Callable[[], QWidget] | None:
         """Load the user interface class for an installed and trusted module.
 
         Parameters:
             module_id (str): Identifier of the module to load.
 
         Returns:
-            type[QWidget] | None: The module's UI class, or `None` when no UI class is available.
+            Callable[[], QWidget] | None: The module's UI class or factory function,
+                or `None` when no UI class is available.
 
         Raises:
             ValueError: If the module is not installed.

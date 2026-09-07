@@ -1,8 +1,11 @@
 """Unified Preferences Dialog."""
 
+import logging
 import typing
+from typing import Protocol, runtime_checkable
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -20,10 +23,32 @@ from karcytics.ui.dialogs.diagnostics_settings_widget import DiagnosticsSettings
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
 
+@runtime_checkable
+class SupportsClearAppData(Protocol):
+    def clear_app_data(self) -> None: ...
+
+
+logger = logging.getLogger(__name__)
+
+_DANGER_BTN_STYLE = """
+QPushButton {
+    background-color: {BG_DARK};
+    color: {ACCENT_DANGER};
+    border: 1px solid {ACCENT_DANGER};
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+QPushButton:hover {
+    background-color: {ACCENT_DANGER};
+    color: #ffffff;
+}
+"""
+
+
 class ThemeSettingsWidget(QWidget):
     """Widget for selecting the application theme."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("theme_settings_widget")
         layout = QVBoxLayout(self)
@@ -56,11 +81,11 @@ class ThemeSettingsWidget(QWidget):
                 radio = QRadioButton(name)
                 radio.setFont(Fonts.BODY)
                 theme_manager.apply_style(radio, f"color: {Colors.FG_PRIMARY};")
-                radio.toggled.connect(lambda checked, p=path: self._on_theme_toggled(checked, p))
-
                 # Check if it's the current theme
                 if theme_manager.current_theme_name == name:
                     radio.setChecked(True)
+
+                radio.toggled.connect(lambda checked, p=path: self._on_theme_toggled(checked, p))
 
                 self.button_group.addButton(radio)
                 layout.addWidget(radio)
@@ -68,10 +93,8 @@ class ThemeSettingsWidget(QWidget):
         layout.addStretch()
         self._apply_styles()
         theme_manager.theme_changed.connect(self._apply_styles)
-        self._apply_styles()
-        theme_manager.theme_changed.connect(self._apply_styles)
 
-    def _apply_styles(self):
+    def _apply_styles(self) -> None:
         from PyQt6.QtWidgets import QLabel, QRadioButton
 
         for label in self.findChildren(QLabel):
@@ -83,7 +106,7 @@ class ThemeSettingsWidget(QWidget):
         for radio in self.findChildren(QRadioButton):
             theme_manager.apply_style(radio, f"color: {Colors.FG_PRIMARY};")
 
-    def _on_theme_toggled(self, checked: bool, path: str):
+    def _on_theme_toggled(self, checked: bool, path: str) -> None:
 
         if checked:
             from pathlib import Path
@@ -97,7 +120,7 @@ class ThemeSettingsWidget(QWidget):
 class AboutSettingsWidget(QWidget):
     """Widget displaying combined About Karcytics and About Developer information."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
@@ -135,7 +158,7 @@ class AboutSettingsWidget(QWidget):
         self._apply_styles()
         theme_manager.theme_changed.connect(self._apply_styles)
 
-    def _apply_styles(self):
+    def _apply_styles(self) -> None:
         from PyQt6.QtWidgets import QLabel
 
         for label in self.findChildren(QLabel):
@@ -145,7 +168,12 @@ class AboutSettingsWidget(QWidget):
 class AdvancedSettingsWidget(QWidget):
     """Widget for advanced data management and developer tools."""
 
-    def __init__(self, parent=None, hub_manager=None, workspace_window=None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        hub_manager: object | None = None,
+        workspace_window: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.hub_manager = hub_manager
         self.workspace_window = workspace_window
@@ -177,43 +205,13 @@ class AdvancedSettingsWidget(QWidget):
 
         clear_btn = QPushButton("🧹 Clear App Data...")
         clear_btn.setObjectName("dangerBtn")
-        theme_manager.apply_style(
-            clear_btn,
-            f"""
-            QPushButton {{
-                background-color: {Colors.BG_DARK};
-                color: #ff4444;
-                border: 1px solid #ff4444;
-                padding: 8px 16px;
-                border-radius: 4px;
-            }}
-            QPushButton:hover {{
-                background-color: #ff4444;
-                color: #ffffff;
-            }}
-            """,
-        )
+        theme_manager.apply_style(clear_btn, _DANGER_BTN_STYLE)
         clear_btn.clicked.connect(self._clear_data)
         layout.addWidget(clear_btn)
 
         uninstall_btn = QPushButton("🗑️ Uninstall Karcytics...")
         uninstall_btn.setObjectName("dangerBtn")
-        theme_manager.apply_style(
-            uninstall_btn,
-            f"""
-            QPushButton {{
-                background-color: {Colors.BG_DARK};
-                color: #ff4444;
-                border: 1px solid #ff4444;
-                padding: 8px 16px;
-                border-radius: 4px;
-            }}
-            QPushButton:hover {{
-                background-color: #ff4444;
-                color: #ffffff;
-            }}
-            """,
-        )
+        theme_manager.apply_style(uninstall_btn, _DANGER_BTN_STYLE)
         uninstall_btn.clicked.connect(self._uninstall)
         layout.addWidget(uninstall_btn)
 
@@ -221,7 +219,7 @@ class AdvancedSettingsWidget(QWidget):
         self._apply_styles()
         theme_manager.theme_changed.connect(self._apply_styles)
 
-    def _apply_styles(self):
+    def _apply_styles(self) -> None:
         from PyQt6.QtWidgets import QLabel, QPushButton
 
         for label in self.findChildren(QLabel):
@@ -229,35 +227,20 @@ class AdvancedSettingsWidget(QWidget):
 
         for btn in self.findChildren(QPushButton):
             if btn.objectName() == "dangerBtn":
-                theme_manager.apply_style(
-                    btn,
-                    f"""
-                    QPushButton {{
-                        background-color: {Colors.BG_DARK};
-                        color: #ff4444;
-                        border: 1px solid #ff4444;
-                        padding: 8px 16px;
-                        border-radius: 4px;
-                    }}
-                    QPushButton:hover {{
-                        background-color: #ff4444;
-                        color: #ffffff;
-                    }}
-                    """,
-                )
+                theme_manager.apply_style(btn, _DANGER_BTN_STYLE)
             else:
                 theme_manager.apply_style(
                     btn, f"background-color: {Colors.BG_DARK}; color: {Colors.FG_PRIMARY};"
                 )
 
-    def _view_logs(self):
+    def _view_logs(self) -> None:
 
         from karcytics.ui.dialogs.log_viewer import LogViewerDialog
 
         dialog = LogViewerDialog(self)
         dialog.exec()
 
-    def _clear_data(self):
+    def _clear_data(self) -> None:
         from PyQt6.QtWidgets import QMessageBox
 
         reply = QMessageBox.question(
@@ -268,12 +251,18 @@ class AdvancedSettingsWidget(QWidget):
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            if self.hub_manager and hasattr(self.hub_manager, "_clear_app_data"):
-                self.hub_manager._clear_app_data()
-            elif hasattr(self.workspace_window, "_clear_app_data"):
-                self.workspace_window._clear_app_data()
+            for owner in (self.hub_manager, self.workspace_window):
+                if isinstance(owner, SupportsClearAppData):
+                    owner.clear_app_data()
+                    return
 
-    def _uninstall(self):
+            QMessageBox.warning(
+                self,
+                "Clear App Data",
+                "Clearing application data is not available from this window.",
+            )
+
+    def _uninstall(self) -> None:
         import shutil
         import sys
         from pathlib import Path
@@ -330,7 +319,12 @@ class AdvancedSettingsWidget(QWidget):
 class PreferencesDialog(QDialog):
     """Unified Preferences Dialog with left navigation and right stacked pages."""
 
-    def __init__(self, parent=None, hub_manager=None, workspace_window=None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        hub_manager: object | None = None,
+        workspace_window: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("preferences_dialog")
         self.setWindowTitle("Preferences")
@@ -344,20 +338,20 @@ class PreferencesDialog(QDialog):
         theme_manager.theme_changed.connect(self._apply_styles)
 
     @typing.override
-    def showEvent(self, event):
+    def showEvent(self, event: QShowEvent) -> None:
         from karcytics.core.event_bus import KarcyticsEvent, event_bus
 
         super().showEvent(event)
         event_bus.emit(KarcyticsEvent.PREFERENCES_OPENED)
 
     @typing.override
-    def closeEvent(self, event):
+    def done(self, r: int) -> None:
         from karcytics.core.event_bus import KarcyticsEvent, event_bus
 
-        super().closeEvent(event)
+        super().done(r)
         event_bus.emit(KarcyticsEvent.PREFERENCES_CLOSED)
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -405,7 +399,7 @@ class PreferencesDialog(QDialog):
         self.nav_list.addItem(title)
         self.stack.addWidget(widget)
 
-    def _apply_styles(self):
+    def _apply_styles(self) -> None:
         theme_manager.apply_style(
             self,
             f"""

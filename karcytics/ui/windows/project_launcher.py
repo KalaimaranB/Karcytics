@@ -1,6 +1,7 @@
 """Karcytics Hub - Project selection and creation dashboard."""
 
 import logging
+import weakref
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -98,6 +99,9 @@ class ProjectLauncherWindow(QMainWindow):
         QTimer.singleShot(800, self._maybe_start_core_intro)
 
         # Lightweight polling loop to keep the overlay in sync with AcademyManager
+        self._hub_interaction_connections: weakref.WeakKeyDictionary[QWidget, dict[str, object]] = (
+            weakref.WeakKeyDictionary()
+        )
         self._hub_poll_timer = QTimer(self)
         self._hub_poll_timer.setInterval(100)
         self._hub_poll_timer.timeout.connect(self._poll_tutorial_overlay)
@@ -257,7 +261,7 @@ class ProjectLauncherWindow(QMainWindow):
             if hasattr(self, "_theme_loading_overlay") and self._theme_loading_overlay.isVisible():
                 self._theme_loading_overlay.resize(self._central_widget.size())
 
-    def _find_tutorial_target_widgets(self, name: str) -> list:
+    def _find_tutorial_target_widgets(self, name: str) -> list[QWidget]:
         """Search for a named widget across the main window AND any open dialogs.
 
         The Hub's main window only contains Hub widgets — dialogs like
@@ -267,16 +271,50 @@ class ProjectLauncherWindow(QMainWindow):
         """
         from PyQt6.QtWidgets import QApplication, QDialog
 
-        # Search self first
+        from karcytics.core.tutorial_manager import global_tutorial_manager
+
+        def _by_tutorial_id(root: QWidget) -> list[QWidget]:
+            # setObjectName is the fast path; only fall back to the full
+            # property scan when the caller opted into tutorial_id targeting.
+            return [
+                w
+                for w in root.findChildren(QWidget)
+                if w.isVisible() and w.property("tutorial_id") == name
+            ]
+
+        # Search self first (fast path - NOT cached to avoid stale states)
         results = [w for w in self.findChildren(QWidget, name) if w and w.isVisible()]
         if results:
             return results
 
-        # tutorial_id property fallback on self
-        for w in self.findChildren(QWidget):
-            if w.property("tutorial_id") == name and w.isVisible():
-                results.append(w)
+        # Determine cache key: active step ID and visible top-level dialogs.
+        visible_dialogs = tuple(
+            id(d)
+            for d in QApplication.topLevelWidgets()
+            if isinstance(d, QDialog) and d.isVisible()
+        )
+        step_id = (
+            global_tutorial_manager.current_step.id
+            if global_tutorial_manager.current_step
+            else None
+        )
+
+        cache_key = (step_id, visible_dialogs)
+
+        if getattr(self, "_tutorial_id_cache_key", None) != cache_key:
+            self._tutorial_id_cache_key = cache_key
+            self._tutorial_id_cache: dict[str, list[QWidget]] = {}
+
+        if name in self._tutorial_id_cache:
+            # Re-check visibility of cached widgets to avoid stale states!
+            valid_cached = [w for w in self._tutorial_id_cache[name] if w.isVisible()]
+            if valid_cached:
+                return valid_cached
+
+        # Slow path scan for self
+        results = _by_tutorial_id(self)
         if results:
+            self._tutorial_id_cache[name] = results
             return results
 
         # Widen search to any open top-level dialog
@@ -285,10 +323,9 @@ class ProjectLauncherWindow(QMainWindow):
                 found = [w for w in top.findChildren(QWidget, name) if w and w.isVisible()]
                 results.extend(found)
                 if not found:
-                    for w in top.findChildren(QWidget):
-                        if w.property("tutorial_id") == name and w.isVisible():
-                            results.append(w)
+                    results.extend(_by_tutorial_id(top))
 
+        self._tutorial_id_cache[name] = results
         return results
 
     def _poll_tutorial_overlay(self) -> None:
@@ -309,11 +346,13 @@ class ProjectLauncherWindow(QMainWindow):
 
         # On step change: re-render and wire up any InteractionStep signal
         if step.id != getattr(self, "_hub_last_step_id", None):
-            self._hub_last_step_id = step.id
             self._hub_tutorial_overlay.render_step(step)
 
             if isinstance(step, InteractionStep) and step.target_widget_name:
-                self._wire_hub_interaction_step(step)
+                if self._wire_hub_interaction_step(step):
+                    self._hub_last_step_id = step.id
+            else:
+                self._hub_last_step_id = step.id
 
         # Always update target rectangles to track widget movement
         targets = []
@@ -332,43 +371,49 @@ class ProjectLauncherWindow(QMainWindow):
         self._hub_tutorial_overlay.set_targets(rects)
         self._hub_tutorial_overlay.raise_()
 
-    def _wire_hub_interaction_step(self, step) -> None:
+    def _wire_hub_interaction_step(self, step) -> bool:
         """Connect an InteractionStep's signal so it auto-advances the tutorial.
 
         Searches both the main window and any open dialogs for the target widget.
         Uses a stable connection key so repeated poll ticks don't double-connect.
         """
-        if not hasattr(self, "_hub_interaction_connections"):
-            self._hub_interaction_connections: dict[str, object] = {}
-
         targets = self._find_tutorial_target_widgets(step.target_widget_name)
+        if not targets:
+            return False
+
+        def _make_advancer(step_id: str):
+            def _advance(*_args):
+                from karcytics.core.tutorial_manager import global_tutorial_manager
+
+                current = global_tutorial_manager.current_step
+                if current and current.id == step_id:
+                    global_tutorial_manager.next_step()
+
+            return _advance
+
+        advancer = _make_advancer(step.id)
+
+        connected = False
         for target_w in targets:
-            conn_key = f"{step.id}__{step.target_widget_name}__{step.event_trigger}__{id(target_w)}"
-            if conn_key in self._hub_interaction_connections:
+            conn_key = f"{step.id}__{step.target_widget_name}__{step.event_trigger}"
+            widget_conns = self._hub_interaction_connections.setdefault(target_w, {})
+
+            if conn_key in widget_conns:
+                connected = True
                 continue
             if not hasattr(target_w, step.event_trigger):
                 continue
 
-            def _make_advancer(step_id: str):
-                def _advance(*_args):
-                    current = global_tutorial_manager.current_step
-                    if current and current.id == step_id:
-                        global_tutorial_manager.next_step()
-
-                return _advance
-
-            from karcytics.core.tutorial_manager import global_tutorial_manager
-
-            advancer = _make_advancer(step.id)
-            self._hub_interaction_connections[conn_key] = advancer
             try:
                 getattr(target_w, step.event_trigger).connect(advancer)
+                widget_conns[conn_key] = advancer
+                connected = True
             except Exception as e:
-                import logging
-
-                logging.getLogger(__name__).warning(
+                logger.warning(
                     f"Hub tutorial: failed to connect {step.event_trigger} on {target_w}: {e}"
                 )
+
+        return connected
 
     def _on_hub_tutorial_next(self) -> None:
         from karcytics_sdk.plugin.tutorial_models import BranchingStep
@@ -628,7 +673,7 @@ class ProjectLauncherWindow(QMainWindow):
 
     def _setup_menu_bar(self):
         """
-        Builds the window's Theme and Help menus with actions for theme selection, help resources, onboarding, and log viewing.
+        Builds the window's Edit, Theme, and Help menus with actions for Preferences, theme selection, help resources, and onboarding.
         """
         from karcytics_sdk.plugin.menu_builder import StandardMenuBuilder
 
@@ -658,20 +703,20 @@ class ProjectLauncherWindow(QMainWindow):
         """Initialize the footer area."""
         pass
 
-    def _view_logs(self):
+    def _view_logs(self) -> None:
         """View application logs."""
         from karcytics.ui.dialogs.log_viewer import LogViewerDialog
 
         dialog = LogViewerDialog(self)
         dialog.exec()
 
-    def _open_preferences(self):
+    def _open_preferences(self) -> None:
         """Open the unified preferences dialog."""
         from karcytics.ui.dialogs.preferences_dialog import PreferencesDialog
 
         dialog = PreferencesDialog(
             parent=self,
-            hub_manager=self.hub_manager if hasattr(self, "hub_manager") else self,
+            hub_manager=self,
             workspace_window=None,
         )
         dialog.exec()
@@ -706,7 +751,7 @@ class ProjectLauncherWindow(QMainWindow):
             self._hub_tutorial_overlay.set_targets([])
             self._hub_tutorial_overlay.raise_()
 
-    def _clear_app_data(self) -> None:
+    def clear_app_data(self) -> None:
         """Clear all Karcytics app data and quit asynchronously to avoid UI freezing."""
         from PyQt6.QtWidgets import QApplication
 

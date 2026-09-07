@@ -4,11 +4,32 @@ import contextlib
 import importlib
 import logging
 import sys
+import weakref
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from karcytics_sdk.plugin import KarcyticsPlugin
 from PyQt6.QtWidgets import QWidget
+
+
+@dataclass
+class _DaemonLoaderState:
+    diagnostics_forwarding_wired: bool = False
+    state_changed_forwarding_wired: bool = False
+    academy_handoff_forwarding_wired: bool = False
+    last_seen_file_count: int = 0
+
+
+_daemon_states: weakref.WeakKeyDictionary[Any, _DaemonLoaderState] = weakref.WeakKeyDictionary()
+
+
+def _get_daemon_state(daemon: Any) -> _DaemonLoaderState:
+    if daemon not in _daemon_states:
+        _daemon_states[daemon] = _DaemonLoaderState()
+    return _daemon_states[daemon]
+
 
 if TYPE_CHECKING:
     from karcytics_sdk.host.module_status_widget import ModuleStatusWidget
@@ -41,7 +62,7 @@ class PluginLoaderFactory:
     """Instantiates plugin UI classes based on their architecture (V2 vs V3)."""
 
     @staticmethod
-    def load_ui(module_id: str, mod_info: dict[str, Any]) -> type[QWidget] | None:
+    def load_ui(module_id: str, mod_info: dict[str, Any]) -> Callable[[], QWidget] | None:
         """Load a plugin and obtain its UI panel class.
 
         Parameters:
@@ -49,8 +70,9 @@ class PluginLoaderFactory:
             mod_info (dict[str, Any]): Plugin metadata and mutable loading state.
 
         Returns:
-            type[QWidget] | None: The plugin's UI panel class, or `None` when initialization
-                fails with an exception that is contained by the loader.
+            Callable[[], QWidget] | None: The plugin's UI panel class or factory function,
+                or `None` when initialization fails with an exception that is contained by
+                the loader.
 
         Raises:
             TypeError: If the plugin does not satisfy the required interface.
@@ -138,7 +160,7 @@ class PluginLoaderFactory:
             return None
 
     @staticmethod
-    def _load_ui_isolated(module_id: str, display_name: str) -> type[QWidget]:
+    def _load_ui_isolated(module_id: str, display_name: str) -> Callable[[], QWidget]:
         """Return a zero-arg factory for module_id's status widget.
 
         Deliberately does none of what the in-process path above does:
@@ -166,7 +188,7 @@ class PluginLoaderFactory:
             PluginLoaderFactory._wire_academy_handoff_forwarding(daemon)
             return widget
 
-        return _factory  # type: ignore[return-value]
+        return _factory
 
     @staticmethod
     def _wire_diagnostics_forwarding(daemon: "PluginUIDaemon") -> None:
@@ -183,9 +205,10 @@ class PluginLoaderFactory:
         so guard against re-wiring a second listener on every reopen of an
         already-running module.
         """
-        if getattr(daemon, "_diagnostics_forwarding_wired", False):
+        state = _get_daemon_state(daemon)
+        if state.diagnostics_forwarding_wired:
             return
-        daemon._diagnostics_forwarding_wired = True  # type: ignore[attr-defined]
+        state.diagnostics_forwarding_wired = True
 
         def _on_event(topic: str, payload: object) -> None:
             if topic != "diagnostics_error" or not isinstance(payload, dict):
@@ -224,10 +247,10 @@ class PluginLoaderFactory:
         `WorkspaceWindow._last_import_file_count`'s own bookkeeping) so this
         only fires on an actual *increase*, not every state_changed tick.
         """
-        if getattr(daemon, "_state_changed_forwarding_wired", False):
+        state = _get_daemon_state(daemon)
+        if state.state_changed_forwarding_wired:
             return
-        daemon._state_changed_forwarding_wired = True  # type: ignore[attr-defined]
-        daemon._last_seen_file_count = 0  # type: ignore[attr-defined]
+        state.state_changed_forwarding_wired = True
 
         def _on_event(topic: str, payload: object) -> None:
             if topic != "state_changed" or not isinstance(payload, dict):
@@ -235,14 +258,18 @@ class PluginLoaderFactory:
             file_count = payload.get("file_count")
             if not isinstance(file_count, int):
                 return
-            last_seen = getattr(daemon, "_last_seen_file_count", 0)
+            last_seen = state.last_seen_file_count
             if file_count <= last_seen:
                 return
-            daemon._last_seen_file_count = file_count  # type: ignore[attr-defined]
+            state.last_seen_file_count = file_count
 
             from karcytics.core.event_bus import KarcyticsEvent, event_bus
 
-            event_bus.emit(KarcyticsEvent.FILE_IMPORTED, "")
+            file_path = payload.get("file_path")
+            if isinstance(file_path, str) and file_path:
+                event_bus.emit(KarcyticsEvent.FILE_IMPORTED, file_path)
+            else:
+                event_bus.emit(KarcyticsEvent.MODULE_IMPORT_COUNT_CHANGED, file_count)
 
         daemon.event_received.connect(_on_event)
 
@@ -260,19 +287,18 @@ class PluginLoaderFactory:
         `"analysis_saved_confirm_spotlight"` here is what lets the Hub's own
         tour pick back up for the graduation phase, back in the Hub UI.
         """
-        if getattr(daemon, "_academy_handoff_forwarding_wired", False):
+        state = _get_daemon_state(daemon)
+        if state.academy_handoff_forwarding_wired:
             return
-        daemon._academy_handoff_forwarding_wired = True  # type: ignore[attr-defined]
+        state.academy_handoff_forwarding_wired = True
 
         def _on_event(topic: str, _payload: object) -> None:
             if topic != "academy_handoff_complete":
                 return
 
-            from karcytics.core.tutorial_manager import global_tutorial_manager
+            from karcytics.core.event_bus import KarcyticsEvent, event_bus
 
-            active_course = global_tutorial_manager.active_course
-            if active_course and active_course.id == "core_intro_v1":
-                global_tutorial_manager.next_step("analysis_saved_confirm_spotlight")
+            event_bus.emit(KarcyticsEvent.PLUGIN_HANDOFF_COMPLETE)
 
         daemon.event_received.connect(_on_event)
 

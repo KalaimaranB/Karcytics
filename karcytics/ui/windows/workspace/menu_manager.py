@@ -1,5 +1,7 @@
 """Menu Manager for WorkspaceWindow."""
 
+from pathlib import Path
+
 from PyQt6.QtGui import QAction
 
 from karcytics.ui.theme import theme_manager
@@ -46,11 +48,11 @@ class MenuManager:
             pref_cb=self.open_preferences,
         )
 
-        def _switch_theme(path: str) -> None:
+        def _switch_theme(path: Path) -> None:
             from karcytics.core.preferences import core_preferences
 
-            theme_manager.load_theme(path)
-            core_preferences.set("theme", str(path))
+            if theme_manager.load_theme(path):
+                core_preferences.set("theme", str(path))
 
         # --- View Menu (Theme) ---
         builder.add_theme_menu(

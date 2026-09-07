@@ -1,4 +1,5 @@
 import logging
+import typing
 
 from karcytics.core.diagnostics import BlackBoxHandler, DiagnosticEngine
 from karcytics.core.event_bus import KarcyticsEvent, event_bus
@@ -49,7 +50,7 @@ def test_error_reporting(qtbot):
     assert len(data["history"]) > 0
 
 
-def test_error_reporting_with_remote_exception_and_traceback(qtbot):
+def test_error_reporting_with_remote_exception_and_traceback(qtbot: typing.Any) -> None:
     """An isolated plugin has no live exception object to hand over — its
     error crosses an RPC/event boundary as already-formatted strings (see
     core_services_bootstrap.py's diagnostics.report_error handler and
@@ -59,7 +60,7 @@ def test_error_reporting_with_remote_exception_and_traceback(qtbot):
     """
     engine = DiagnosticEngine()
 
-    received_data = []
+    received_data: list[typing.Any] = []
     event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, received_data.append)
 
     try:
@@ -124,3 +125,32 @@ def test_black_box_formatting():
 
     history = handler.get_history()
     assert history[0]["message"] == "INFO - Formatted message"
+
+
+def test_error_reporting_throttles_remote_exceptions_distinctly(qtbot):
+    engine = DiagnosticEngine()
+    # Reset throttle state so first error is guaranteed to process
+    engine._last_error_time = 0.0
+
+    received_data = []
+    event_bus.subscribe(KarcyticsEvent.ERROR_OCCURRED, received_data.append)
+
+    try:
+        engine.report_error(
+            "Common message",
+            plugin_id="flow",
+            exception_repr="ValueError: first",
+            traceback_str="...",
+        )
+        engine.report_error(
+            "Common message",
+            plugin_id="flow",
+            exception_repr="TypeError: second",
+            traceback_str="...",
+        )
+
+        assert len(received_data) == 2
+        assert received_data[0]["exception"] == "ValueError: first"
+        assert received_data[1]["exception"] == "TypeError: second"
+    finally:
+        event_bus.unsubscribe(KarcyticsEvent.ERROR_OCCURRED, received_data.append)
