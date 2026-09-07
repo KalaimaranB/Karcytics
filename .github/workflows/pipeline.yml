@@ -249,6 +249,7 @@ jobs:
     env:
       SOURCE_DATE_EPOCH: 0
       PYTHONHASHSEED: 0
+      KARCYTICS_SENTRY_DSN: ${{ secrets.KARCYTICS_SENTRY_DSN }}
     steps:
       - name: Checkout Code
         uses: "actions/checkout@v4"

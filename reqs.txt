@@ -7,6 +7,7 @@ certifi==2026.6.17 \
     # via
     #   karcytics
     #   requests
+    #   sentry-sdk
 cffi==2.0.0 ; platform_python_implementation != 'PyPy' \
     --hash=sha256:1e3a615586f05fc4065a8b22b8152f0c1b00cdbc60596d187c2a74f9e3036e4e \
     --hash=sha256:21d1152871b019407d8ac3985f6775c079416c282e431a4da6afe7aefd2bccbe \
@@ -154,7 +155,9 @@ matplotlib==3.11.0 \
     --hash=sha256:9dd11fb612ce7bc60b1de5b4fc87ff959d22317b5de42aabf392f66f97af22eb \
     --hash=sha256:ac6f1ef39f3d0f9e2463303013094992cdbe0f85f43bc54155bc472b2042768e \
     --hash=sha256:be5f93a1d21981bfb802ded0d77a0caa92d4342a47d45754fac77e314a506344
-    # via karcytics
+    # via
+    #   karcytics
+    #   karcytics-sdk
 msgpack==1.2.1 \
     --hash=sha256:020e881a764b20d8d7ca1a54fc01b8175519d108e3c3f194fddc200bda95951a \
     --hash=sha256:04c721c2c7448767e9e3f2520a475663d8ee0f09c31890f6d2bd70fd636a9647 \
@@ -362,6 +365,10 @@ scipy==1.17.1 \
     #   karcytics
     #   karcytics-sdk
     #   scikit-image
+sentry-sdk==2.68.0 \
+    --hash=sha256:538e56c2d03679d42f7c0cb5f1af73a7a510b00abc7e296c13ac49b107b713a4 \
+    --hash=sha256:648c58e9887311a03470a41539e24bdbbf64a30ca4f5336f7e3dcc87276400b3
+    # via karcytics
 six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
     --hash=sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81
@@ -379,4 +386,6 @@ tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32' \
 urllib3==2.7.0 \
     --hash=sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c \
     --hash=sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897
-    # via requests
+    # via
+    #   requests
+    #   sentry-sdk

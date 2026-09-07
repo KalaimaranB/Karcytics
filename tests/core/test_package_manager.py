@@ -103,13 +103,17 @@ def test_resolve_bundled_uv_windows(monkeypatch, tmp_path):
     worker_script.parent.mkdir(parents=True)
     worker_script.touch()
 
-    with patch("subprocess.run") as mock_run:
+    with patch("subprocess.run") as mock_run, patch("subprocess.Popen") as mock_popen:
         mock_run.return_value.returncode = 0
+        mock_popen.return_value.stdout = []
+        mock_popen.return_value.returncode = 0
         pm.resolve_and_install_all({"dummy": "1.0"}, plugin_dir, lambda x: None)
 
         # Verify uv.exe was used
         args = mock_run.call_args_list[0][0][0]
         assert args[0] == str(bin_dir / "uv.exe")
+        args_popen = mock_popen.call_args_list[0][0][0]
+        assert args_popen[0] == str(bin_dir / "uv.exe")
 
 
 def test_resolve_bundled_uv_unix(monkeypatch, tmp_path):
@@ -137,13 +141,17 @@ def test_resolve_bundled_uv_unix(monkeypatch, tmp_path):
     worker_script.parent.mkdir(parents=True)
     worker_script.touch()
 
-    with patch("subprocess.run") as mock_run:
+    with patch("subprocess.run") as mock_run, patch("subprocess.Popen") as mock_popen:
         mock_run.return_value.returncode = 0
+        mock_popen.return_value.stdout = []
+        mock_popen.return_value.returncode = 0
         pm.resolve_and_install_all({"dummy": "1.0"}, plugin_dir, lambda x: None)
 
         # Verify uv was used
         args = mock_run.call_args_list[0][0][0]
         assert args[0] == str(bin_dir / "uv")
+        args_popen = mock_popen.call_args_list[0][0][0]
+        assert args_popen[0] == str(bin_dir / "uv")
 
 
 class _FakeDaemon:

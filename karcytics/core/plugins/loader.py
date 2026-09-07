@@ -4,14 +4,36 @@ import contextlib
 import importlib
 import logging
 import sys
+import weakref
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from karcytics_sdk.plugin import KarcyticsPlugin
 from PyQt6.QtWidgets import QWidget
 
+
+@dataclass
+class _DaemonLoaderState:
+    diagnostics_forwarding_wired: bool = False
+    state_changed_forwarding_wired: bool = False
+    academy_handoff_forwarding_wired: bool = False
+    last_seen_file_count: int = 0
+
+
+_daemon_states: weakref.WeakKeyDictionary[Any, _DaemonLoaderState] = weakref.WeakKeyDictionary()
+
+
+def _get_daemon_state(daemon: Any) -> _DaemonLoaderState:
+    if daemon not in _daemon_states:
+        _daemon_states[daemon] = _DaemonLoaderState()
+    return _daemon_states[daemon]
+
+
 if TYPE_CHECKING:
     from karcytics_sdk.host.module_status_widget import ModuleStatusWidget
+    from karcytics_sdk.plugin.daemon import PluginUIDaemon
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +62,7 @@ class PluginLoaderFactory:
     """Instantiates plugin UI classes based on their architecture (V2 vs V3)."""
 
     @staticmethod
-    def load_ui(module_id: str, mod_info: dict[str, Any]) -> type[QWidget] | None:
+    def load_ui(module_id: str, mod_info: dict[str, Any]) -> Callable[[], QWidget] | None:
         """Load a plugin and obtain its UI panel class.
 
         Parameters:
@@ -48,8 +70,9 @@ class PluginLoaderFactory:
             mod_info (dict[str, Any]): Plugin metadata and mutable loading state.
 
         Returns:
-            type[QWidget] | None: The plugin's UI panel class, or `None` when initialization
-                fails with an exception that is contained by the loader.
+            Callable[[], QWidget] | None: The plugin's UI panel class or factory function,
+                or `None` when initialization fails with an exception that is contained by
+                the loader.
 
         Raises:
             TypeError: If the plugin does not satisfy the required interface.
@@ -137,7 +160,7 @@ class PluginLoaderFactory:
             return None
 
     @staticmethod
-    def _load_ui_isolated(module_id: str, display_name: str) -> type[QWidget]:
+    def _load_ui_isolated(module_id: str, display_name: str) -> Callable[[], QWidget]:
         """Return a zero-arg factory for module_id's status widget.
 
         Deliberately does none of what the in-process path above does:
@@ -160,9 +183,124 @@ class PluginLoaderFactory:
             daemon = PluginUIDaemon.get_instance(module_id)
             widget = ModuleStatusWidget(daemon, module_name=display_name)
             PluginLoaderFactory._wire_theme_sync(widget)
+            PluginLoaderFactory._wire_diagnostics_forwarding(daemon)
+            PluginLoaderFactory._wire_state_changed_forwarding(daemon)
+            PluginLoaderFactory._wire_academy_handoff_forwarding(daemon)
             return widget
 
-        return _factory  # type: ignore[return-value]
+        return _factory
+
+    @staticmethod
+    def _wire_diagnostics_forwarding(daemon: "PluginUIDaemon") -> None:
+        """Forward an isolated module's `diagnostics_error` events to the Hub's `DiagnosticEngine`.
+
+        A plugin's own `karcytics_sdk.plugin.runtime_services.diagnostics
+        .report_error(...)` (the isolated equivalent of an in-process
+        plugin's `self.logger.error(..., exc_info=True)` reaching the Hub's
+        `AutoReportHandler`) pushes a `"diagnostics_error"` event over this
+        same daemon's frame channel — nothing on the Hub side was ever
+        subscribed to `event_received` for that topic, so every one of those
+        reports vanished silently before this existed. `get_instance()` is a
+        singleton keyed by plugin_id (same as `_wire_theme_sync`'s widget),
+        so guard against re-wiring a second listener on every reopen of an
+        already-running module.
+        """
+        state = _get_daemon_state(daemon)
+        if state.diagnostics_forwarding_wired:
+            return
+        state.diagnostics_forwarding_wired = True
+
+        def _on_event(topic: str, payload: object) -> None:
+            if topic != "diagnostics_error" or not isinstance(payload, dict):
+                return
+
+            from karcytics.core.diagnostics import diagnostics
+
+            diagnostics.report_error(
+                message=payload.get("message", ""),
+                plugin_id=payload.get("plugin_id"),
+                fatal=bool(payload.get("fatal", False)),
+                exception_repr=payload.get("exception"),
+                traceback_str=payload.get("traceback"),
+            )
+
+        daemon.event_received.connect(_on_event)
+
+    @staticmethod
+    def _wire_state_changed_forwarding(daemon: "PluginUIDaemon") -> None:
+        """Finish the `FILE_IMPORTED` wire for isolated modules.
+
+        `ui_daemon.py`'s `_build_panel()` already connects the real panel's
+        `state_changed` signal to `send_event("state_changed", {"file_count":
+        ...})` over this daemon's frame channel — its own comment says the
+        payload shape "must match what `WorkspaceWindow
+        ._on_daemon_state_changed()` expects", but that Hub-side method was
+        never written, so every one of those frames was silently dropped
+        (same class of gap `_wire_diagnostics_forwarding` above closed for
+        `diagnostics_error`). `WorkspaceWindow._on_wizard_state_changed()`
+        can't fill this role itself — it reads `mw.wizard_panel.state`, and
+        for an isolated module `mw.wizard_panel` is the `ModuleStatusWidget`
+        this factory builds, not the real panel living in the daemon's own
+        process; it has no `.state`.
+
+        Tracks the last seen file_count per daemon (mirroring
+        `WorkspaceWindow._last_import_file_count`'s own bookkeeping) so this
+        only fires on an actual *increase*, not every state_changed tick.
+        """
+        state = _get_daemon_state(daemon)
+        if state.state_changed_forwarding_wired:
+            return
+        state.state_changed_forwarding_wired = True
+
+        def _on_event(topic: str, payload: object) -> None:
+            if topic != "state_changed" or not isinstance(payload, dict):
+                return
+            file_count = payload.get("file_count")
+            if not isinstance(file_count, int):
+                return
+            last_seen = state.last_seen_file_count
+            if file_count <= last_seen:
+                return
+            state.last_seen_file_count = file_count
+
+            from karcytics.core.event_bus import KarcyticsEvent, event_bus
+
+            file_path = payload.get("file_path")
+            if isinstance(file_path, str) and file_path:
+                event_bus.emit(KarcyticsEvent.FILE_IMPORTED, file_path)
+            else:
+                event_bus.emit(KarcyticsEvent.MODULE_IMPORT_COUNT_CHANGED, file_count)
+
+        daemon.event_received.connect(_on_event)
+
+    @staticmethod
+    def _wire_academy_handoff_forwarding(daemon: "PluginUIDaemon") -> None:
+        """Resumes the Hub's `core_intro` tour once its handed-off module phase finishes.
+
+        Inside the isolated plugin process, `karcytics_plugins.flow_cytometry.ui_daemon`'s
+        `_maybe_start_onboarding_handoff()` sends an
+        `"academy_handoff_complete"` frame over this same daemon's channel
+        when its local `core_intro_handoff` course completes (see
+        `plugin_loader.py::_instantiate_isolated_overlay`, which is what
+        told that process to start it in the first place, via
+        `daemon.pending_academy_handoff`). Advancing straight to
+        `"analysis_saved_confirm_spotlight"` here is what lets the Hub's own
+        tour pick back up for the graduation phase, back in the Hub UI.
+        """
+        state = _get_daemon_state(daemon)
+        if state.academy_handoff_forwarding_wired:
+            return
+        state.academy_handoff_forwarding_wired = True
+
+        def _on_event(topic: str, _payload: object) -> None:
+            if topic != "academy_handoff_complete":
+                return
+
+            from karcytics.core.event_bus import KarcyticsEvent, event_bus
+
+            event_bus.emit(KarcyticsEvent.PLUGIN_HANDOFF_COMPLETE)
+
+        daemon.event_received.connect(_on_event)
 
     @staticmethod
     def _wire_theme_sync(widget: "ModuleStatusWidget") -> None:

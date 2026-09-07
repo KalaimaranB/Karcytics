@@ -77,3 +77,6 @@ scratch/
 
 # MkDocs Static Site
 site/
+
+# Build-time generated files (never commit)
+_sentry_rthook.py

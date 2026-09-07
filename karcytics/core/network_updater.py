@@ -5,6 +5,7 @@ import os
 import tempfile
 import webbrowser
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -80,14 +81,18 @@ class NetworkUpdater:
         """
         return RegistrySync.fetch_remote_registry(registry_url)
 
-    def evaluate_store_state(self) -> dict:
+    def evaluate_store_state(self, cancel_check: Callable[[], bool] | None = None) -> dict:
         """Evaluate store state and synchronize related trust and system asset data.
 
         Returns:
                 dict: The evaluated store inventory (enriched with per-plugin metadata).
         """
         store_inventory, author_list, remote_data = RegistrySync.evaluate_store_state(
-            self.core_version, self.registry_url, self.plugin_dir, self.local_registry_path
+            self.core_version,
+            self.registry_url,
+            self.plugin_dir,
+            self.local_registry_path,
+            cancel_check,
         )
         self.sync_trusted_developers(author_list)
         self.fetch_and_sync_authorities()

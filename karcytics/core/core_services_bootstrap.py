@@ -216,6 +216,8 @@ def start_core_services() -> CoreServicesServer:  # noqa: C901, PLR0915
             message=kwargs.get("message", ""),
             plugin_id=kwargs.get("plugin_id"),
             fatal=kwargs.get("fatal", False),
+            exception_repr=kwargs.get("exception"),
+            traceback_str=kwargs.get("traceback"),
         )
         return {"status": "ok"}
 

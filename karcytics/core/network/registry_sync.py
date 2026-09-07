@@ -1,6 +1,7 @@
 """Local and remote registry state management."""
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -79,7 +80,11 @@ class RegistrySync:
 
     @staticmethod
     def evaluate_store_state(
-        core_version: str, registry_url: str, plugin_dir: Path, local_registry_path: Path
+        core_version: str,
+        registry_url: str,
+        plugin_dir: Path,
+        local_registry_path: Path,
+        cancel_check: Callable[[], bool] | None = None,
     ):  # noqa: E501
         """Compare installed plugins with the remote registry and classify their availability.
 
@@ -129,7 +134,7 @@ class RegistrySync:
             }
 
         # Eagerly enrich every entry from each plugin's own pyproject.toml
-        store_inventory = PluginRegistryFetcher.fetch_all(store_inventory)
+        store_inventory = PluginRegistryFetcher.fetch_all(store_inventory, cancel_check)
 
         # Resolve verified status now that author keys are populated from pyproject.toml
         roots_dir = Path.home() / ".karcytics" / "trusted_roots"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Karcytics"
-version = "2.0.1"
+version = "2.0.2"
 description = "High-performance molecular data processing and analysis tool — Open Source, Free and Accessible to all."
 readme = "README.md"
 license = "MIT"
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 dependencies = [
-    "karcytics-sdk>=2.0.0",
+    "karcytics-sdk>=2.1.0",
     "msgpack>=1.0.0",
     "PyQt6>=6.6",
     "PyQt6-WebEngine>=6.6",
@@ -44,6 +44,7 @@ dependencies = [
     "tifffile",
     "certifi",
     "pyobjc-framework-cocoa>=12.2.1 ; sys_platform == 'darwin'",
+    "sentry-sdk>=2.68.0",
 ]
 
 [project.optional-dependencies]
@@ -141,7 +142,9 @@ module = [
     "umap.*",
     "seaborn.*",
     "requests.*",
-    "requests"
+    "requests",
+    "sentry_sdk.*",
+    "sentry_sdk"
 ]
 ignore_missing_imports = true
 

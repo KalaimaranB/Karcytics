@@ -118,7 +118,7 @@ def create_safe_zip() -> bytes:
     return buffer.getvalue()
 
 
-@patch("karcytics.core.network.client.requests.get")
+@patch("requests.Session.get")
 def test_plugin_installer_zip_slip(mock_get, temp_plugin_dir, monkeypatch):
     """Verify that the Zip Slip vulnerability is blocked by safe extraction."""
     monkeypatch.setattr(Path, "home", lambda: temp_plugin_dir)
@@ -133,7 +133,7 @@ def test_plugin_installer_zip_slip(mock_get, temp_plugin_dir, monkeypatch):
     installer.run()
 
 
-@patch("karcytics.core.network.client.requests.get")
+@patch("requests.Session.get")
 def test_plugin_installer_ssl_verify(mock_get, temp_plugin_dir, monkeypatch):
     """Ensure requests.get is called with properly configured SSL certs."""
     import certifi
@@ -162,7 +162,7 @@ def test_plugin_installer_ssl_verify(mock_get, temp_plugin_dir, monkeypatch):
     )
 
 
-@patch("karcytics.core.network.client.requests.get")
+@patch("requests.Session.get")
 def test_network_updater_fetch_registry(mock_get, temp_plugin_dir, monkeypatch):
     """Ensure NetworkUpdater uses requests with verify=certifi.where() and no-cache headers."""
     import certifi
@@ -206,7 +206,7 @@ class TestNetworkUpdaterExpanded:
         monkeypatch.setattr(Path, "home", lambda: temp_plugin_dir)
         return NetworkUpdater()
 
-    @patch("karcytics.core.network.client.requests.get")
+    @patch("requests.Session.get")
     def test_evaluate_store_state_scenarios(self, mock_get, updater):
         """Classify plugins as INSTALL, UPDATE, UP_TO_DATE, or INCOMPATIBLE based on local and remote state."""
         mock_response = mock_get.return_value
@@ -292,7 +292,7 @@ class TestNetworkUpdaterExpanded:
             updater.check_for_core_updates()
             mock_fetch.assert_called_once_with(updater.core_registry_url)
 
-    @patch("karcytics.core.network.client.requests.get")
+    @patch("requests.Session.get")
     def test_install_plugin_updates_local_registry(self, mock_get, updater):
         """Verify that successful installation updates the local registry file."""
         mock_response = mock_get.return_value
@@ -334,7 +334,7 @@ class TestNetworkUpdaterExpanded:
 
     def test_fetch_remote_registry_error(self, updater):
         """Ensures that network errors during registry fetch return an empty dict."""
-        with patch("karcytics.core.network.client.requests.get", side_effect=Exception("Timeout")):
+        with patch("requests.Session.get", side_effect=Exception("Timeout")):
             res = updater.fetch_remote_registry("http://bad.url")
             assert res == {}
 
@@ -358,7 +358,7 @@ class TestNetworkUpdaterExpanded:
 
     def test_install_plugin_failure_path(self, updater):
         """Ensures that installation failures are caught and reported."""
-        with patch("karcytics.core.network.client.requests.get", side_effect=Exception("IO Error")):
+        with patch("requests.Session.get", side_effect=Exception("IO Error")):
             success, msg = updater.install_plugin("fail", {"download_url": "..."})
             assert success is False
             assert "Failed to install" in msg
@@ -410,7 +410,7 @@ class TestNetworkUpdaterExpanded:
         roots_dir = temp_plugin_dir / ".karcytics" / "trusted_roots"
         roots_dir.mkdir(parents=True, exist_ok=True)
 
-        with patch("karcytics.core.network.client.requests.get") as mock_get:
+        with patch("requests.Session.get") as mock_get:
             mock_get.return_value.status_code = 404
             # Should not raise
             updater.fetch_and_sync_authorities()
@@ -430,7 +430,7 @@ class TestNetworkUpdaterExpanded:
         canonical_bytes = json.dumps(authorities, sort_keys=True).encode()
         sig = private_key.sign(canonical_bytes).hex()
 
-        with patch("karcytics.core.network.client.requests.get") as mock_get:
+        with patch("requests.Session.get") as mock_get:
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = {"authorities": authorities, "signature": sig}
             # This should fail because the root public key hex was patched to 00...
@@ -456,7 +456,7 @@ class TestNetworkUpdaterExpanded:
 
         with (
             patch.object(updater, "fetch_remote_registry", return_value=remote_data),
-            patch("karcytics.core.network.client.requests.get") as mock_get,
+            patch("requests.Session.get") as mock_get,
             patch("shutil.rmtree"),
             patch("zipfile.ZipFile"),
             patch("karcytics.core.network.system_assets.safe_extract"),
@@ -480,7 +480,8 @@ class TestNetworkUpdaterExpanded:
         with patch.object(PluginInstallerWorker, "finished") as mock_finished:
             worker = PluginInstallerWorker("test", "url", tmp_path)
             with patch(
-                "karcytics.core.network.client.requests.get", side_effect=Exception("Crash")
+                "karcytics.ui.workers.plugin_installer.NetworkClient.get",
+                side_effect=Exception("Crash"),
             ):
                 worker.run()
                 mock_finished.emit.assert_called_with(False, "Installation error: Crash")

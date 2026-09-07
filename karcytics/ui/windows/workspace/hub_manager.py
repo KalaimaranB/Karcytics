@@ -257,9 +257,10 @@ class HubManager:
 
     def handle_workflow_settings(self, module_id: str, filename: str) -> None:
         mw = self.main_window
-        from karcytics.ui.dialogs.workflow_settings import WorkflowSettingsDialog
+        from karcytics.ui.dialogs.workflow_properties import WorkflowPropertiesDialog
 
-        dialog = WorkflowSettingsDialog(mw.project_manager, module_id, filename, parent=mw)
+        dialog = WorkflowPropertiesDialog(mw.project_manager, module_id, filename, parent=mw)
         dialog.workflow_deleted.connect(self.refresh_hub_workflows)
         dialog.attachment_deleted.connect(self.refresh_hub_workflows)
+        dialog.workflow_updated.connect(self.refresh_hub_workflows)
         dialog.exec()
