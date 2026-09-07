@@ -334,7 +334,7 @@ class WorkspaceWindow(QMainWindow):
 
         step = global_tutorial_manager.current_step
         has_completion = (
-            hasattr(active_overlay, "completion_container")
+            getattr(active_overlay, "completion_container", None) is not None
             and active_overlay.completion_container.isVisible()
         )
         if not step and (not has_completion):
