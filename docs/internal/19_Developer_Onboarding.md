@@ -21,16 +21,11 @@ Contributors who do not author executing code are credited in the plugin's `mani
 ### Manifest Entry
 Contributors are added to the `authors` array but omitted from the `"sign_code"` permission. This exempts them from signature validation during the plugin load sequence.
 
-```json
-{
-  "authors": [
-    {
-      "name": "Jane Doe",
-      "role": "QA Analyst",
-      "permissions": ["run_tests"]
-    }
-  ]
-}
+```toml
+[[tool.karcytics.plugin.authors]]
+name = "Jane Doe"
+role = "QA Analyst"
+permissions = ["run_tests"]
 ```
 
 ---

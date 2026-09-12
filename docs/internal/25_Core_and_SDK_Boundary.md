@@ -110,7 +110,7 @@ code that depends on the Hub:
 ### `karcytics_sdk.interfaces` — the dependency-inversion seam
 
 `i_task_scheduler.py` (`ITaskScheduler`), `i_event_bus.py` (`IEventBus`),
-`i_logger.py` (`ILogger`) — `runtime_checkable` `Protocol`s, no
+`i_logger.py` (`ILogger`), `i_crash_reporter.py` (`ICrashReporter`) — `runtime_checkable` `Protocol`s, no
 implementation. This is the whole point of the SDK/Core split expressed as
 code: a plugin (or the SDK itself) can type against "something that behaves
 like a task scheduler" without ever importing the class that actually is

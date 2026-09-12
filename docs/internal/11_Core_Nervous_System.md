@@ -31,6 +31,9 @@ Events are strongly typed using a central `Enum` to prevent string-matching erro
 | `PLUGIN_REMOVED` | A plugin package is deleted. | `plugin_id: str` |
 | `PROJECT_LOADED` | A `.karcytics` project is opened. | `path: str` |
 | `THEME_CHANGED` | The global UI theme is updated. | `theme_name: str` |
+| `ERROR_OCCURRED` | An error is intercepted by the Diagnostic Engine. | `error_data: dict` |
+
+*(Additional events exist for system states, Academy tracking, and user actions. See `event_bus.py` for the full enumeration.)*
 
 ### 2. Subscribing to Events
 UI components typically register their callbacks during initialization.
@@ -75,11 +78,15 @@ Karcytics includes a `karcytics.core.diagnostics` module for error tracking and 
 ### 1. In-Memory Event Buffer
 The engine maintains a ring buffer of the most recent system events, network requests, and state transitions.
 
-### 2. Global Exception Hook
-The core overrides `sys.excepthook`. Upon an unhandled exception:
+### 2. Error Reporting and Interception
+The core intercepts errors in two primary ways:
+1. **AutoReportHandler**: A custom logging handler automatically forwards any `ERROR` or `CRITICAL` log directly to the `DiagnosticEngine`.
+2. **Global Exception Hook**: Unhandled exceptions are caught by overriding `sys.excepthook`.
+
+When a fatal error occurs:
 1. The event buffer is frozen.
-2. The stack trace and the buffer contents are serialized into a JSON crash report.
-3. The `ERROR_OCCURRED` event is emitted.
+2. The stack trace and the buffer contents are sent to the crash reporter (e.g., Sentry) if consent is given.
+3. The `ERROR_OCCURRED` event is emitted to notify the UI.
 
 ### 3. Plugin Logging Integration
 Plugins utilizing the standard `karcytics.sdk.utils.logging` interface have their logs automatically piped into the diagnostic buffer.

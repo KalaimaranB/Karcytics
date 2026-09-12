@@ -44,17 +44,16 @@ The `manifest.json` file dictates which authors are required to provide a valid 
 * Authors listed with the `"sign_code"` permission **must** sign the plugin. A missing or invalid signature for these authors results in an immediate verification failure.
 * Authors without the `"sign_code"` permission are not audited for signatures.
 
-```json
-{
-  "manifest_version": 2,
-  "id": "analysis_module",
-  "authors": [
-    {
-      "name": "Primary Developer",
-      "permissions": ["sign_code"]
-    }
-  ]
-}
+```toml
+[project]
+name = "analysis_module"
+version = "1.0.0"
+description = "Analysis Module"
+
+[[tool.karcytics.plugin.authors]]
+name = "Primary Developer"
+role = "admin"
+permissions = ["sign_code"]
 ```
 
 ---

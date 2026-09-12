@@ -8,13 +8,13 @@ Karcytics enforces rigorous testing protocols to ensure data integrity and secur
 
 Testing prioritizes critical pathways such as communication buses, cryptographic security architectures, and state management.
 
-| Component | Target Coverage | Status |
-| :--- | :---: | :--- |
-| **Event Bus** | >90% | Satisfied |
-| **Diagnostics Engine** | >90% | Satisfied |
-| **Trust Architecture** | >85% | Satisfied |
-| **History Manager** | >85% | Satisfied |
-| **Project & Asset Manager** | >75% | Satisfied |
+| Component | Target Coverage | Actual Coverage | Status |
+| :--- | :---: | :---: | :--- |
+| **Event Bus** | >90% | 85% | Needs Improvement |
+| **Diagnostics Engine** | >90% | 70% | Needs Improvement |
+| **Trust Architecture** | >85% | ~90% | Satisfied |
+| **History Manager** | >85% | 96% | Satisfied |
+| **Project & Asset Manager** | >75% | 72% | Needs Improvement |
 
 > [!NOTE]
 > Modules exclusively handling UI rendering (e.g., `preferences.py`) may exhibit lower unit test coverage as they are primarily validated via integration testing workflows.
