@@ -1,97 +1,105 @@
 # Tutorial: First Analysis
 
-This tutorial walks through a simple Karcytics analysis from selecting a module to reviewing results.
+This tutorial walks through a simple Karcytics analysis from opening a project to reviewing results.
 
 ---
 
-## Step 1: Open or Create a Project
+## Step 1: Open or create a project
 
 Start from the Project Hub:
 
-1. Open a recent project from the left panel, or click **📁 Open Project...**.
-2. If you are new, click **✨ Create New Project** and choose a project folder.
-3. Verify the project directory contains a `project.karcytics` file before continuing.
+1. Open a recent project, or click **Open Project**.
+2. If you are new, click **Create New Project** and choose a project folder.
+3. Verify the folder contains a `project.karcytics` file before continuing.
+
+```mermaid
+flowchart TD
+    A[Project Hub] --> B[Create or open project]
+    B --> C[Project ready]
+    C --> D[Launch module]
+    D --> E[Run analysis and review results]
+```
 
 ---
 
-## Step 2: Choose a Module
+## Step 2: Choose a module
 
 From the Home Screen, select an analysis module card.
 
-* If the module is not installed yet, click **☁️ Marketplace** to install it.
+* If the module is not installed yet, click **Marketplace** to install it.
 * Installed modules appear in the Hub automatically.
 
 > [!NOTE]
-> If a module is blocked, untrusted, or outdated, Karcytics will show a warning and guide you to the Plugin Store for resolution.
+> If a module is blocked, untrusted, or outdated, Karcytics shows a warning and points you to the Plugin Store.
 
 ---
 
-## Want an interactive walkthrough?
+## Want a guided walkthrough?
 
-If you prefer a guided experience, open **🎓 Academy** and start the Cyto startup course before continuing with this tutorial.
+If you want a more friendly ramp-up, open **Academy** and start the Cyto startup course before continuing with this tutorial.
 
-Cyto will step through the same core concepts and workflow setup in a training-friendly mode.
+Cyto walks through the same fundamentals in a training-friendly format.
 
 ---
 
-## Step 3: Use the Wizard Flow
+## Step 3: Use the wizard flow
 
-Many modules use a guided wizard interface. The normal workflow is:
+Many modules use a guided wizard interface. The standard flow is:
 
-1. **Choose data** — select files, images, or other inputs required by the analysis.
-2. **Configure parameters** — adjust sliders, thresholds, and settings.
-3. **Run analysis** — execute the module and monitor progress.
-4. **Review results** — inspect output plots, tables, or visual summaries.
-5. **Export** — save your results as CSV, images, or other supported formats.
+1. **Choose data** — select files, images, or other inputs
+2. **Configure parameters** — adjust sliders, thresholds, and rules
+3. **Run analysis** — execute the module and monitor progress
+4. **Review results** — inspect output plots, tables, or visual summaries
+5. **Export** — save results as CSV, images, or other supported formats
 
 ### Practical tips
 
-* Use the built-in file picker to locate input files.
-* If the module reports validation errors, correct the input data before continuing.
-* The UI is designed to keep the main window responsive while the analysis runs.
+* use the built-in file picker to locate input files;
+* if the module reports validation errors, fix the data before continuing;
+* keep the project organized as you move through each stage.
 
 ---
 
-## Step 4: Use the Workspace View
+## Step 4: Explore the workspace view
 
-Some modules open in a workspace style rather than a linear wizard.
+Some modules open in a workspace-style view rather than a linear wizard.
 
-In workspace mode you will typically see:
+In workspace mode, you will typically see:
 
-* A top toolbar with project controls and navigation.
-* Side panels for assets, workflow status, and properties.
-* A central canvas for the main analysis or visualization.
+* a top toolbar with project controls and navigation,
+* side panels for assets, workflow status, and properties,
+* a central canvas for your analysis or visualization.
 
-Workspace modules are best for exploratory tasks and workflows that require multiple iterations.
+This is useful when you want to iterate on settings or compare multiple outputs.
 
 ---
 
-## Step 5: Use Undo / Redo
+## Step 5: Use undo and redo
 
 Karcytics preserves edit history for many modules.
 
-* Use **Ctrl+Z** (Windows) or **Cmd+Z** (macOS) to undo.
-* Use **Ctrl+Y** or **Shift+Ctrl+Z** to redo.
-* The **Edit** menu includes **Undo** and **Redo** whenever a project is open.
+* use **Ctrl+Z** on Windows or **Cmd+Z** on macOS to undo,
+* use **Ctrl+Y** or **Shift+Ctrl+Z** to redo,
+* the **Edit** menu includes undo and redo when a project is open.
 
 > [!NOTE]
-> The availability of undo/redo depends on the active module and the current workflow.
+> The availability of undo/redo depends on the active module and workflow.
 
 ---
 
-## Step 6: Close the Project Safely
+## Step 6: Close the project safely
 
 When your work is complete:
 
-* Choose **Close Project & Return to Hub** from the workspace toolbar.
-* Karcytics saves the project before returning to the Hub.
+* choose **Close Project & Return to Hub** from the workspace toolbar,
+* Karcytics saves your project before returning to the Hub.
 
-If the app closes unexpectedly, a stale `.karcytics.lock` file may remain. Remove it only when you are sure no other instance of Karcytics is using the project.
+If the app closes unexpectedly, a stale `.karcytics.lock` file may remain. Remove it only when you are certain no other Karcytics instance is using the project.
 
 ---
 
-## Next Steps
+## What comes next?
 
-* [Plugin Store & Security](07_Plugin_Store_and_Security.md) — Install modules and manage trust.
-* [Project Management](04_Project_Management.md) — Learn how Karcytics stores your data.
-* [FAQ & Troubleshooting](05_FAQ_Troubleshooting.md) — Diagnose problems and view logs.
+* [Plugin Store & Security](07_Plugin_Store_and_Security.md) — install modules and manage trust
+* [Project Management](04_Project_Management.md) — understand how Karcytics stores and saves work
+* [FAQ & Troubleshooting](05_FAQ_Troubleshooting.md) — diagnose problems and review logs

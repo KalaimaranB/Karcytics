@@ -1,39 +1,78 @@
-# Core Architecture Overview (Event Bus)
+# Core Architecture Overview
 
-Karcytics utilizes an Event-Driven Architecture (EDA) to decouple system components. Modules such as the Plugin Store, Workspace, and Core Storage communicate via a central event bus rather than direct method invocations.
+Karcytics uses a modular, event-driven architecture to keep the main application stable while allowing plugins, workspaces, and project tooling to react to changes without hard dependencies on one another.
 
 ---
 
-## Architectural Rationale
+## Why this architecture exists
 
-Decoupling components prevents tightly coupled dependencies. For instance, the Plugin Store does not require a direct reference to the Workspace Window to trigger a UI refresh after a plugin installation. Instead, it emits a `PLUGIN_INSTALLED` event, and any interested component can subscribe and react independently.
+At a high level, Karcytics separates three concerns:
+
+* the host application (core UI, project state, navigation)
+* plugin modules (analysis tools and workflows)
+* the project state and history layer (save, undo, restore, snapshots)
+
+This matters because the app needs to react to things like plugin installation, theme changes, project opens, and diagnostics without creating fragile, tightly coupled object graphs.
 
 ```mermaid
-graph LR
-    P[Plugin Store] -->|emit: PLUGIN_INSTALLED| EB((Event Bus))
-    EB -->|notify| W1[Workspace Window]
-    EB -->|notify| W2[Hub Window]
-    EB -->|notify| L[Logger]
+flowchart LR
+    UI[Host UI] --> BUS[(Event Bus)]
+    STORE[Plugin Store] --> BUS
+    PROJECT[Project Manager] --> BUS
+    DIAG[Diagnostics] --> BUS
+    BUS --> W1[Workspace View]
+    BUS --> W2[Hub / Launcher]
+    BUS --> W3[Logger]
 ```
 
 ---
 
-## The Event Bus Implementation (`karcytics.core.event_bus`)
+## Core idea: decoupled communication
 
-The global event bus is instantiated as a singleton `event_bus`.
+The event bus lets components communicate by publishing events instead of calling each other directly. This keeps subsystems loosely coupled and makes it easier to add new workflows.
 
-### 1. The `KarcyticsEvent` Enumeration
-Events are strongly typed using a central `Enum` to prevent string-matching errors and enable static analysis.
+Example:
 
-| Event | Trigger Condition | Expected Payload |
+* the Plugin Store installs a module,
+* it emits `PLUGIN_INSTALLED`,
+* the Hub refreshes its module list,
+* the workspace could update its actions,
+* the logger records the event,
+* none of those components need direct references to one another.
+
+```mermaid
+sequenceDiagram
+    participant PS as Plugin Store
+    participant EB as Event Bus
+    participant HUB as Hub
+    participant WS as Workspace
+    participant LOG as Logger
+
+    PS->>EB: emit PLUGIN_INSTALLED
+    EB-->>HUB: notify
+    EB-->>WS: notify
+    EB-->>LOG: record event
+```
+
+---
+
+## Event bus implementation
+
+The global bus is a singleton held in `karcytics.core.event_bus`.
+
+### Event types
+
+Events are strongly typed through a central enum, which makes the system safer than using plain strings.
+
+| Event | Trigger condition | Expected payload |
 | :--- | :--- | :--- |
-| `PLUGIN_INSTALLED` | A plugin package is added and verified. | `plugin_id: str` |
-| `PLUGIN_REMOVED` | A plugin package is deleted. | `plugin_id: str` |
-| `PROJECT_LOADED` | A `.karcytics` project is opened. | `path: str` |
-| `THEME_CHANGED` | The global UI theme is updated. | `theme_name: str` |
+| `PLUGIN_INSTALLED` | a verified plugin is added | `plugin_id: str` |
+| `PLUGIN_REMOVED` | a plugin is removed | `plugin_id: str` |
+| `PROJECT_LOADED` | a project is opened | `path: str` |
+| `THEME_CHANGED` | the UI theme changes | `theme_name: str` |
+| `ERROR_OCCURRED` | a diagnostic event is emitted after an exception | `error_context: dict` |
 
-### 2. Subscribing to Events
-UI components typically register their callbacks during initialization.
+### Subscribing to events
 
 ```python
 from karcytics.core.event_bus import event_bus, KarcyticsEvent
@@ -48,48 +87,60 @@ class MyDashboard(QWidget):
         self.refresh()
 ```
 
-### 3. Emitting Events
-Event emission is thread-safe. Karcytics utilizes PyQt6's signal queuing mechanism to ensure callbacks are executed on the Main UI Thread, preventing cross-thread UI updates.
+### Emitting events
+
+Event emission is designed to be thread-safe and UI-safe.
 
 ```python
-def install_plugin(id):
+def install_plugin(plugin_id: str):
     # Perform background tasks...
-    event_bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, id)
+    event_bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, plugin_id)
 ```
 
----
-
-## Reaching an isolated plugin
-
-Everything above is this process's own in-memory bus — an isolated plugin
-(`process_model = "isolated"`, see `docs/internal/24_Plugin_Communication_Protocol.md`)
-runs in a separate OS process and never touches `event_bus` directly. It can
-still opt into hearing a specific `KarcyticsEvent` topic via
-`docs/internal/28_Event_Bridging.md`'s `event.subscribe`/`dispatch_event`
-bridge — scoped per topic, not a blanket forward of everything emitted here.
-
-## Diagnostic Engine
-
-Karcytics includes a `karcytics.core.diagnostics` module for error tracking and application state logging.
-
-### 1. In-Memory Event Buffer
-The engine maintains a ring buffer of the most recent system events, network requests, and state transitions.
-
-### 2. Global Exception Hook
-The core overrides `sys.excepthook`. Upon an unhandled exception:
-1. The event buffer is frozen.
-2. The stack trace and the buffer contents are serialized into a JSON crash report.
-3. The `ERROR_OCCURRED` event is emitted.
-
-### 3. Plugin Logging Integration
-Plugins utilizing the standard `karcytics.sdk.utils.logging` interface have their logs automatically piped into the diagnostic buffer.
+Karcytics uses Qt signal queuing so callbacks are delivered on the main UI thread, avoiding cross-thread UI access errors.
 
 ---
 
-## Thread-Safe Dispatch Details
+## Plugin isolation and cross-process boundaries
 
-The `EventManager` leverages a specialized internal `pyqtSignal`.
-Invoking `emit()` from a background worker thread queues the signal within the Qt Event Loop. It is dispatched sequentially when the Main Thread processes its queue, preventing concurrent access violations on GUI elements.
+The in-process event bus is only part of the story. An isolated plugin runs in a separate OS process and does not directly touch the host event bus.
+
+Instead, the system uses a bridged event path for specific topics. This keeps the host and plugin runtime separated while still allowing controlled communication for relevant events.
+
+This is especially important for the plugin model described in the communication protocol and event bridging docs:
+
+* direct host-to-plugin calls are intentionally limited,
+* only scoped events are bridged,
+* the bus stays inside the host process and does not become a blanket channel for every plugin action.
+
+---
+
+## Diagnostic engine
+
+Karcytics includes a diagnostic layer for runtime tracking and crash reporting.
+
+### In-memory buffer
+
+The engine keeps a ring buffer of recent system events, requests, and state changes. This gives the app a compact history of recent activity without writing a full log on every tiny event.
+
+### Global exception handling
+
+When an unhandled exception occurs, the system can:
+
+1. freeze the current diagnostic buffer,
+2. serialize a crash report,
+3. emit an `ERROR_OCCURRED` event,
+4. route that data to the logger or support tooling.
+
+### Plugin logging integration
+
+Plugins using the standard logging interfaces can pipe their logs into the same diagnostic pathway, which helps with troubleshooting and support cases.
+
+---
+
+## Thread-safe dispatch details
+
+The event manager uses Qt’s signal system to queue work safely.
 
 ```python
 class EventManager(QObject):
@@ -98,3 +149,18 @@ class EventManager(QObject):
     def emit(self, event_type, *args, **kwargs):
         self._internal_bus.emit(event_type, args, kwargs)
 ```
+
+This pattern ensures that background worker threads can publish events without directly touching the UI thread; the Qt event loop handles the delivery order.
+
+---
+
+## Why this matters
+
+A clean event-driven core makes Karcytics easier to evolve:
+
+* new UI surfaces can subscribe without wiring tight dependencies,
+* plugin installation and project changes can trigger coordinated updates,
+* diagnostics stay centralized and easier to inspect,
+* the architecture is compatible with isolated plugin execution and safer system boundaries.
+
+For most contributors, the most important mental model is simple: the core uses events to announce state changes, and subscribers react to those changes without owning each other’s implementation.

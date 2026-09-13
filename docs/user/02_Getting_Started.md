@@ -1,25 +1,30 @@
 # Getting Started
 
-This guide helps you launch Karcytics for the first time, create or open a project, and find the main controls in the Project Hub.
+This guide helps you launch Karcytics for the first time, create or open a project, and understand the key controls in the Project Hub.
 
 ---
 
-## Before You Begin
+## Before you begin
 
-If Karcytics is not yet installed, start with the [Installation](06_Installation.md) page first.
+If Karcytics is not installed yet, start with [Installation](06_Installation.md).
 
-Karcytics stores its application data in your home folder under `~/.karcytics`. This includes installed plugins, trusted developer keys, logs, and recent project settings.
+Karcytics stores local app data in `~/.karcytics`. This includes:
+
+* installed plugins
+* trusted developer keys
+* logs
+* recent project metadata
 
 ---
 
 ## Launching Karcytics
 
-1. Open Karcytics from your operating system’s application launcher or the extracted installation folder.
-2. On first launch, Karcytics displays the **Project Hub**.
-3. The Hub is where you select a project, install plugins, and access help.
+1. Open Karcytics from your operating system’s app launcher or the extracted install folder.
+2. On first launch, the app opens the **Project Hub**.
+3. The Hub is the main starting point for new projects, existing projects, plugin installation, and help.
 
 > [!NOTE]
-> You can reopen the Hub from the workspace by choosing **File → Home Screen** or by clicking the home button in the top toolbar.
+> You can reopen the Hub from inside a workspace by choosing **File → Home Screen** or using the home button in the top toolbar.
 
 ---
 
@@ -27,51 +32,53 @@ Karcytics stores its application data in your home folder under `~/.karcytics`. 
 
 ![1786425540776](image/02_Getting_Started/1786425540776.png)
 
-The Project Hub has two primary areas:
+The Project Hub has a few core areas:
 
-* **Recent Projects** — A list of your most recently opened projects.
-* **Action Buttons** — Create a new project, open an existing project, or open the Marketplace.
+* **Recent Projects** — a list of the project folders you most recently opened
+* **Create New Project** — starts a new saved workspace
+* **Open Project** — opens an existing project folder
+* **Marketplace** — installs and manages analysis modules
+* **Academy** — launches the guided onboarding experience
 
-### What you can do from the Hub
-
-* **Create New Project** — Start a new saved workspace for your experiment.
-* **Open Project** — Select an existing Karcytics project directory.
-* **☁️ Marketplace** — Install and manage analysis modules.
-* **🎓 Academy** — Launch Cyto’s guided learning experience for beginner onboarding and module tutorials.
-
-> [!NOTE]
-> The Hub also displays update notifications when a new Karcytics core version is available.
+```mermaid
+flowchart TD
+    A[Open Karcytics] --> B[Project Hub]
+    B --> C[Open Existing Project]
+    B --> D[Create New Project]
+    B --> E[Install plugin]
+    E --> F[Open workspace]
+```
 
 ---
 
-## Creating a New Project
+## Creating a new project
 
-1. Click **✨ Create New Project**.
+1. Click **Create New Project**.
 2. Enter a project name.
-3. Choose a folder on your computer where the project will live.
-4. Confirm to create the project.
+3. Select a folder where the project should live.
+4. Confirm the project creation.
 
-Karcytics saves every project as a directory containing:
+Karcytics saves every project as a folder containing:
 
-* `project.karcytics` — the main project state file.
-* `assets/` — managed assets such as images and attachments.
-* `workflows/` — saved workflow snapshots produced by analysis modules.
-* `.karcytics.lock` — a temporary lock file created while the project is open.
+* `project.karcytics` — the main project state file
+* `assets/` — images and files managed by the project
+* `workflows/` — saved workflow snapshots
+* `.karcytics.lock` — temporary lock file while the project is open
 
 > [!WARNING]
-> Do not open the same project in more than one instance of Karcytics at the same time.
+> Do not open the same project in more than one Karcytics instance at once. This can lead to lock conflicts or data corruption.
 
 ---
 
-## Opening an Existing Project
+## Opening an existing project
 
-1. Click **📁 Open Project...**.
+1. Click **Open Project**.
 2. Navigate to the project folder that contains `project.karcytics`.
 3. Select the folder and open it.
 
-If another instance of Karcytics is already using the project, the app will warn you and prevent the second open to avoid data corruption.
+If another Karcytics instance is already using the project, the app will prevent a second open to avoid data corruption.
 
-If Karcytics crashed previously and left a stale lock file, you may safely remove `.karcytics.lock` from the project folder before reopening.
+If Karcytics crashed and left a stale lock file, remove `.karcytics.lock` from the project folder before reopening—only after confirming no Karcytics instance is still using the project.
 
 ---
 
@@ -79,25 +86,29 @@ If Karcytics crashed previously and left a stale lock file, you may safely remov
 
 Karcytics includes a built-in Help Center for offline documentation.
 
-* Press **F1** to open the Help Center from any workspace.
-* In the Help menu, choose **📖 Karcytics Help Center**.
-* Use the **Restart Onboarding Tour** action under Help if you want to replay the guided introduction.
+* Press **F1** from any workspace to open Help.
+* Use **Help → Karcytics Help Center** in the app menu.
+* Use **Restart Onboarding Tour** to replay the guided intro.
 
 ---
 
 ## Using Cyto Academy
 
-Use the **🎓 Academy** button in the home ribbon or workspace toolbar to launch Cyto’s guided startup lessons.
+Use the **Academy** button in the home ribbon or workspace toolbar to launch Cyto’s guided startup lessons.
 
-* The startup course walks you through opening a project, installing a plugin, and running your first analysis.
-* If a module is required for the course, Cyto will prompt you to install it from the Marketplace.
-* Academy lessons are a great way to learn the app without affecting your main project data.
+* The startup course introduces the Project Hub, project files, and modules.
+* If a lesson requires a plugin, Cyto prompts you to install it from the Marketplace.
+* Academy is a safe place to learn workflows without affecting your main project.
 
-> [!NOTE]
-> Screenshot placeholder: Cyto Academy launch button and guided startup workflow.
+> [!TIP]
+> If you are new to Karcytics, start with the Academy tour before diving into a full analysis workflow.
 
 ---
 
-## What Comes Next
+## What comes next?
 
-Once you have a project open, install the analysis tools you need from the Marketplace and then follow the [Tutorial](03_Tutorial_First_Analysis.md) for a first analysis.
+Once your project is open:
+
+1. install the module(s) you need from the Marketplace,
+2. follow the [Tutorial: First Analysis](03_Tutorial_First_Analysis.md), and
+3. use the [FAQ & Troubleshooting](05_FAQ_Troubleshooting.md) page if something feels off.
