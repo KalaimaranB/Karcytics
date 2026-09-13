@@ -1,124 +1,145 @@
-
 # Plugin Store and Security
 
-Karcytics uses a verified plugin architecture to separate the core application from analysis tools. Plugins are installed, updated, and managed from the in-app Marketplace, while security controls protect your system from modified or untrusted modules.
+Karcytics keeps the core app lightweight and lets you install analysis tools as needed. The in-app Plugin Store handles discovery, updates, and trust checks so you can add modules without manually copying files into the app.
 
 ---
 
-## What is the Plugin Store?
+## Why the Plugin Store matters
 
-The Plugin Store is the central place to discover and manage analysis modules for Karcytics.
+Karcytics separates the main application from analysis modules. That gives you:
 
-* **Install** new modules without manually copying files.
-* **Update** installed plugins when new versions are available.
-* **Remove** plugins you no longer need.
-* **Inspect** publisher details and trust status before running a module.
+* a smaller, more stable core app,
+* a modular workflow where you only install what you need,
+* safer plugin execution through trust checks and developer verification.
 
-> [!NOTE]
-> The Plugin Store is available from the Project Hub by clicking the **☁️ Marketplace** button.
+The Plugin Store is the place to manage all of this from a single interface.
 
 ---
 
-## Marketplace Collections
+## What you will see in the Marketplace
 
-The Plugin Store divides modules into a few helpful collections:
+The Plugin Store organizes modules into a few clear views:
 
 ![1786426333527](image/07_Plugin_Store_and_Security/1786426333527.png)
 
-* **All Modules** — Browse every module that the registry knows about.
-* **Available Updates** — See plugins that have newer versions available.
-* **Installed** — Quickly review modules already installed on your machine.
-* **Trusted Developers** — View developer identities that are currently trusted or available for trust.
+* **All Modules** — browse every plugin the registry knows about
+* **Available Updates** — see modules with a newer version available
+* **Installed** — review the plugins currently enabled on your machine
+* **Trusted Developers** — see which publishers are already known and trusted
+
+```mermaid
+flowchart TD
+    A[Open Marketplace] --> B[Browse or search modules]
+    B --> C{Installed?}
+    C -- No --> D[Install plugin]
+    C -- Yes --> E[Open details / update]
+    D --> F[Verify trust status]
+    E --> G[Launch module when ready]
+```
 
 ---
 
-## Installing and Updating Plugins
+## Installing and updating plugins
 
-1. Open the Marketplace.
-2. Use the search field to find a module by name, author, or category.
-3. Click the module card to reveal details.
-4. Click **Install** to download and unpack the plugin.
-5. If an update is available later, return to the Marketplace and choose **Available Updates**.
+1. Open the **Marketplace** from the Project Hub.
+2. Search for a module by name, author, or category.
+3. Open the module card to inspect version and publisher information.
+4. Click **Install** to download and enable the plugin.
+5. If an update is later published, reopen the Marketplace and choose **Available Updates**.
 
-### How plugin installation works
+### How installation works
 
-Installed plugins are stored in the application data folder at `~/.karcytics/plugins`.
+Installed plugins are stored in `~/.karcytics/plugins`.
 
-* The Marketplace downloads plugin packages from the remote registry.
-* The package is extracted safely into its own plugin folder.
-* Karcytics updates a local `installed.json` registry to remember which modules are installed and what version is active.
+* the remote registry provides metadata and package files,
+* the Marketplace downloads and extracts the plugin,
+* Karcytics records the selected version in a local install registry,
+* the plugin becomes available from the project launcher or workspace.
 
 > [!TIP]
-> If a plugin package contains a single top-level folder, Karcytics will flatten it so the plugin still loads correctly.
+> If a plugin package contains a single top-level folder, Karcytics will flatten it so the module still loads correctly.
 
 ---
 
-## Plugin Security Statuses
+## Security status explained
 
-Every plugin is classified by a trust status when Karcytics discovers it.
+Every plugin receives a trust status when Karcytics discovers it.
 
-* **Verified Secure** — The plugin’s signature is valid and the developer identity is part of the trusted authority chain.
-* **Untrusted** — The plugin files are intact, but the developer's signing key is not currently trusted. Karcytics blocks execution until you approve the developer.
-* **Outdated** — The plugin version is incompatible with the installed Karcytics core and needs an update.
+* **Verified Secure** — the plugin is cryptographically valid and the publisher is trusted
+* **Untrusted** — the plugin files are intact, but the developer is not yet trusted by a known authority or local approval
+* **Outdated** — the plugin version is incompatible with the installed Karcytics core or depends on a newer release
 
-If a plugin is blocked because it is untrusted, Karcytics will prompt you before it runs and show a high-visibility security dialog explaining the risk.
+If a plugin is blocked because it is untrusted, Karcytics shows a high-visibility warning before you can run it.
 
 ---
 
-## Trust and Developer Identity
+## Trust and developer identity
 
-Karcytics keeps a list of trusted developer keys and authorities in `~/.karcytics/trusted_roots`.
+Karcytics keeps known trust anchors in `~/.karcytics/trusted_roots`.
 
-When you install or inspect a plugin, the app may display one of the following trust paths:
+When you inspect a plugin, you may see one of these trust paths:
 
-* **Verified Root Trust Chain** — The developer key is verified by the official Karcytics root authority and a signed registry.
-* **Manually Approved Root (Local Override)** — You manually added the developer's public key to your local trust store.
-* **Unverified Self-Signed Identity** — The developer key is present, but no trusted root or authority path is available.
+* **Verified Root Trust Chain** — the developer key is validated through the official Karcytics trust chain
+* **Manually Approved Root (Local Override)** — you approved the developer locally
+* **Unverified Self-Signed Identity** — the plugin is present but no trusted path is available yet
 
 ### Approving an untrusted developer
 
-> [!NOTE]
-> Screenshot placeholder: plugin trust approval dialog with developer identity, public key, and trust options.
+When Karcytics asks you to trust a developer, review the name, key, and source carefully. If you recognize it and trust the publisher:
 
-When Karcytics asks you to trust a new developer, review the developer name and public key carefully. If you recognize the source:
+1. click **Trust this Developer**;
+2. Karcytics saves the developer key locally;
+3. that developer’s plugins can load normally in future sessions.
 
-1. Click **Trust this Developer** in the security dialog.
-2. Karcytics saves the developer key locally and allows their plugins to run on your machine.
-3. The plugin can now load normally in future sessions.
+If you do not recognize the source or do not want to trust it, do not load the plugin.
 
-If you do not recognize the developer or do not want to trust them, click **Not Now** and do not load the plugin.
+> [!IMPORTANT]
+> Only approve a developer if you trust the publisher and are comfortable with the module running code on your machine.
 
 ---
 
-## Plugin Details and Diagnostics
+## Plugin details and diagnostics
 
-Each plugin card includes an option to inspect details such as:
+Each plugin card includes details such as:
 
-* Publisher name and version
-* Minimum required Karcytics core version
-* Verification status badge
-* Developer identity and trust path
+* publisher name and version
+* minimum required Karcytics version
+* verification badge
+* trust path and developer identity
 
-The Marketplace also provides a **Diagnose & Repair** action.
+The Marketplace also has a **Diagnose & Repair** action.
 
-* Use **Repair** to rebuild the plugin state if the module is missing files, cannot be loaded, or fails a trust check.
-* Use **Repair All Plugins** to run a broader cleanup across all installed plugins.
+* Use **Repair** to rebuild plugin state when files are missing or a trust check fails.
+* Use **Repair All Plugins** if a broader reset is needed across installed modules.
 
 ---
 
 ## Keeping plugins up to date
 
-Karcytics periodically synchronizes plugin metadata from a remote registry. The Marketplace uses this registry to determine which plugins are new or updated.
+Karcytics periodically syncs plugin metadata from the remote registry. The Marketplace uses that metadata to show updates or changes in publisher trust.
 
-If a plugin no longer loads after updating, check the plugin details and trust path. You may need to reinstall the plugin or approve a newly published developer key.
+If a plugin stops loading after an update:
+
+* check the plugin details and trust state,
+* verify the developer identity,
+* reinstall the plugin if necessary,
+* re-approve the developer if the trust chain changed.
 
 ---
 
 ## When things go wrong
 
 * If a plugin fails to install, confirm your internet connection and retry.
-* If a plugin is blocked as untrusted, verify the developer identity or remove the plugin if you do not trust it.
-* If a plugin reports a missing dependency, the problem may be caused by the module's container environment. Use the plugin repair action or reinstall the plugin.
+* If a plugin is blocked as untrusted, verify the source or remove it if you do not trust it.
+* If a plugin reports missing dependencies, use the plugin repair action or reinstall it.
 
 > [!NOTE]
-> The Plugin Store is not a generic file browser. It only manages verified plugins that conform to Karcytics’s dynamic plugin model.
+> The Plugin Store is not a generic file browser. It manages verified Karcytics modules that follow the app’s dynamic plugin model.
+
+---
+
+## Next steps
+
+* [Installation](06_Installation.md) — install the app and prepare your system
+* [Getting Started](02_Getting_Started.md) — create or open a project
+* [FAQ & Troubleshooting](05_FAQ_Troubleshooting.md) — solve plugin or startup issues quickly

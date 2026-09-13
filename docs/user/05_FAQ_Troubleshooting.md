@@ -1,37 +1,37 @@
 # FAQ & Troubleshooting
 
-This page answers common issues and points you to the logs, support resources, and recovery strategies.
+This page helps you solve common problems quickly and points you to the right support resources.
 
 ---
 
-## General Questions
+## General questions
 
 ### Is Karcytics open source?
 
-Yes. The Karcytics core application is open-source. Some plugins may be developed by third parties and carry their own licensing or usage terms.
+Yes. The Karcytics core application is open-source. Some third-party plugins may carry their own licensing or usage terms.
 
 ### Does Karcytics upload my data to the cloud?
 
-No. Karcytics stores your projects and analysis data locally. Only plugin metadata and trusted developer registries are fetched from the network.
+No. Karcytics stores your projects and analysis data locally. Only plugin metadata and trusted registry data are fetched from the network.
 
-### Why does Karcytics use a plugin store?
+### Why does Karcytics use a Plugin Store?
 
-The core app is intentionally lightweight. Analysis modules are installed on demand from the Plugin Store so you can add only the tools you need.
+The core application is intentionally lightweight. Analysis modules are installed on demand so you only add the tools you need.
 
 ---
 
-## Cannot open a project
+## I cannot open a project
 
 ### The project is locked
 
-Karcytics creates `.karcytics.lock` inside the project folder while the project is open.
+Karcytics creates `.karcytics.lock` in the project folder while the project is open.
 
 * If another Karcytics instance is already running, close it before reopening the project.
-* If Karcytics crashed and the lock file remains, delete `.karcytics.lock` after verifying that no Karcytics instance is still using the project.
+* If Karcytics crashed and the lock file remains, remove `.karcytics.lock` only after confirming no instance is still using the project.
 
 ### Permission denied
 
-Make sure your operating system account has read and write permission for the project folder and all files inside it. This is especially important for folders synced by cloud services or shared network drives.
+Make sure your operating system account has read and write access to the project folder and every file inside it. This is especially important with synced or network-mounted folders.
 
 ---
 
@@ -39,25 +39,25 @@ Make sure your operating system account has read and write permission for the pr
 
 ### A plugin fails to install or update
 
-* Check your internet connection.
-* Open the **Marketplace** and retry the installation.
-* If the plugin still fails, use the **Repair** action or **Repair All Plugins** in the Plugin Store.
+* check your internet connection,
+* retry the installation from the **Marketplace**,
+* use **Repair** or **Repair All Plugins** if the module state is broken.
 
 ### A plugin is blocked as untrusted
 
-Karcytics will not execute plugins that are not trusted.
+Karcytics does not run untrusted plugins.
 
-* Inspect the developer identity in the Plugin Store.
-* If you recognize the source, approve the developer when prompted.
-* If you do not trust the source, do not run the plugin.
+* inspect the developer identity in the Plugin Store,
+* if you trust the source, approve the developer when prompted,
+* if you do not trust the source, do not load the plugin.
 
 ### A plugin says it is outdated
 
-This means the installed module requires a newer Karcytics core or plugin version.
+This means the plugin requires a newer core version or module version.
 
-* Go to the **Available Updates** collection in the Marketplace.
-* Update the plugin.
-* If the problem persists, update the core application from the Hub’s update banner.
+* open **Available Updates** in the Marketplace,
+* update the plugin,
+* if needed, update the core app from the Hub update banner.
 
 ---
 
@@ -65,41 +65,35 @@ This means the installed module requires a newer Karcytics core or plugin versio
 
 ### View logs
 
-Karcytics stores runtime logs at `~/.karcytics/karcytics.log`.
+Karcytics stores runtime logs in `~/.karcytics/karcytics.log`.
 
-* In the workspace, open **Help → 📜 View Logs**.
-* In the Project Hub, open the same Help menu option.
+* In the workspace, open **Help → View Logs**.
+* In the Project Hub, use the same Help menu option.
 
 ### When to report a bug
 
-Report issues when:
+Report an issue when:
 
-* Karcytics crashes unexpectedly.
-* A plugin repeatedly fails to install or load.
-* A project cannot be opened even after removing a stale lock file.
+* Karcytics crashes unexpectedly,
+* a plugin repeatedly fails to install or load,
+* a project cannot be opened even after removing stale lock files.
 
-Include the log file contents and a description of what you were doing when the problem occurred.
+Include the log file contents and a description of the steps that caused the problem.
 
 ---
 
 ## Application update issues
 
-### Update banner not appearing
+### The update banner does not appear
 
-Karcytics checks for core updates on Hub startup.
+Karcytics checks for core updates when the Hub starts.
 
-* If you do not see an update banner, your current version is likely up to date.
-* If you suspect a newer version exists, visit the GitHub Releases page and compare versions manually.
+* if you do not see a banner, your current version is likely already up to date,
+* if you suspect a newer version exists, compare versions manually on the GitHub Releases page.
 
 ### Skipping a version
 
-The update banner includes **Skip This Version** so you can stay on your current release temporarily. If you skip a version, the banner will not reappear for that version again.
-
----
-
-## AI Assistant
-
-The AI Assistant panel is part of the application roadmap but is not currently exposed in the main toolbar. Use the Help Center and built-in guides to continue working normally.
+The update banner includes **Skip This Version** so you can postpone an upgrade. If you skip a version, the banner may not return for that version again.
 
 ---
 
