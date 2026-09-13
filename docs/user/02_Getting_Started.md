@@ -30,7 +30,7 @@ Karcytics stores local app data in `~/.karcytics`. This includes:
 
 ## The Project Hub
 
-![1786425540776](image/02_Getting_Started/1786425540776.png)
+![alt text](image/02_Getting_Started/hub_view.png)
 
 The Project Hub has a few core areas:
 

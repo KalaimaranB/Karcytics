@@ -44,8 +44,7 @@ The startup guide is the recommended first course for new users.
 3. Explore the workspace layout and key controls.
 4. Complete a simple example analysis.
 
-![1786425912212](image/08_Cyto_Academy/1786425912212.png)
-
+![alt text](image/08_Cyto_Academy/cyto.png)
 ## When to use Cyto Academy
 
 Use the Academy whenever you want:

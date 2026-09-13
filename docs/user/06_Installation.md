@@ -18,7 +18,7 @@ Choose the build that matches your system:
 > [!NOTE]
 > If you are running a source build or developer version, use the repository README and local setup instructions instead of the packaged app flow.
 
-![1786425455778](image/06_Installation/1786425455778.png)
+![alt text](image/06_Installation/releases_view.png)
 
 ---
 
@@ -78,16 +78,6 @@ Try one of these:
 > [!WARNING]
 > Only override Gatekeeper when you downloaded Karcytics from the official repository and release page.
 
-### macOS install walkthrough video
-
-When you record the macOS install video, embed it here:
-
-```html
-<video controls width="100%" poster="assets/videos/karcytics-mac-install-poster.png">
-  <source src="assets/videos/karcytics-mac-install.mp4" type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
-```
 
 ---
 
@@ -102,18 +92,9 @@ Karcytics itself is the host application. Analysis tools are delivered as plugin
 5. Return to the home screen and launch the module from the installed list.
 
 > [!TIP]
-> The Plugin Store includes filters such as **All Modules**, **Available Updates**, **Installed**, and **Trusted Developers**.
+> The Plugin Store includes filters such as **All Modules**, **Available Updates** and **Installed**.
 
-### Windows install walkthrough video
 
-When you record the Windows install video, add it here:
-
-```html
-<video controls width="100%" poster="assets/videos/karcytics-windows-install-poster.png">
-  <source src="assets/videos/karcytics-windows-install.mp4" type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
-```
 
 ---
 
