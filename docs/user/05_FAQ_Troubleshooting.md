@@ -73,7 +73,7 @@ Karcytics stores multiple types of runtime logs locally depending on the subsyst
 
 **The preferred method for reporting crashes is through Karcytics' built-in crash reporter.** If the app encounters a fatal error, you will be prompted to send a diagnostic report automatically via Sentry. We highly encourage opting into this feature!
 
-Please email **kalaimaranb25@gmail.com** for functional or visual issues, such as:
+Please email **[kalaimaranb25@gmail.com](mailto:kalaimaranb25@gmail.com)** for functional or visual issues, such as:
 * A plot or chart is drawing incorrectly.
 * A specific analysis module yields unexpected numbers.
 * You would like to request a new feature.
@@ -101,4 +101,4 @@ The update banner includes **Skip This Version** so you can postpone an upgrade.
 
 * **GitHub Issues:** [https://github.com/KalaimaranB/Karcytics/issues](https://github.com/KalaimaranB/Karcytics/issues)
 * **Documentation portal:** [https://kalaimaranb.github.io/Karcytics/](https://kalaimaranb.github.io/Karcytics/)
-* **Email Support:** kalaimaranb25@gmail.com
+* **Email Support:** [kalaimaranb25@gmail.com](mailto:kalaimaranb25@gmail.com)
