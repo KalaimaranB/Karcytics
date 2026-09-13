@@ -20,7 +20,7 @@ The Plugin Store is the place to manage all of this from a single interface.
 
 The Plugin Store organizes modules into a few clear views:
 
-![1786426333527](image/07_Plugin_Store_and_Security/1786426333527.png)
+![alt text](image/07_Plugin_Store_and_Security/store.png)
 
 * **All Modules** — browse every plugin the registry knows about
 * **Available Updates** — see modules with a newer version available
