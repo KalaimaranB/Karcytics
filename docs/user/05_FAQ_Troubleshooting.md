@@ -65,20 +65,20 @@ This means the plugin requires a newer core version or module version.
 
 ### View logs
 
-Karcytics stores runtime logs in `~/.karcytics/karcytics.log`.
+Karcytics stores multiple types of runtime logs locally depending on the subsystem.
 
-* In the workspace, open **Help → View Logs**.
-* In the Project Hub, use the same Help menu option.
+* You can view these directly in the app by navigating to **Preferences → Privacy/Diagnostics → View Log Folder**.
 
 ### When to report a bug
 
-Report an issue when:
+**The preferred method for reporting crashes is through Karcytics' built-in crash reporter.** If the app encounters a fatal error, you will be prompted to send a diagnostic report automatically via Sentry. We highly encourage opting into this feature!
 
-* Karcytics crashes unexpectedly,
-* a plugin repeatedly fails to install or load,
-* a project cannot be opened even after removing stale lock files.
+Please email **kalaimaranb25@gmail.com** for functional or visual issues, such as:
+* A plot or chart is drawing incorrectly.
+* A specific analysis module yields unexpected numbers.
+* You would like to request a new feature.
 
-Include the log file contents and a description of the steps that caused the problem.
+If a plugin repeatedly fails to install or a project cannot be opened, please attach the relevant log files from your **Log Folder** in your email.
 
 ---
 
@@ -101,4 +101,4 @@ The update banner includes **Skip This Version** so you can postpone an upgrade.
 
 * **GitHub Issues:** [https://github.com/KalaimaranB/Karcytics/issues](https://github.com/KalaimaranB/Karcytics/issues)
 * **Documentation portal:** [https://kalaimaranb.github.io/Karcytics/](https://kalaimaranb.github.io/Karcytics/)
-* **Log file:** `~/.karcytics/karcytics.log`
+* **Email Support:** kalaimaranb25@gmail.com

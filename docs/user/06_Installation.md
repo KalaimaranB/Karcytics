@@ -18,7 +18,7 @@ Choose the build that matches your system:
 > [!NOTE]
 > If you are running a source build or developer version, use the repository README and local setup instructions instead of the packaged app flow.
 
-![1786425455778](image/06_Installation/1786425455778.png)
+![alt text](image/06_Installation/releases_view.png)
 
 ---
 
