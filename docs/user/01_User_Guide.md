@@ -38,7 +38,7 @@ Karcytics is a modular analysis hub built for laboratory scientists, students, a
 
 ---
 
-## How to Use This Guide
+## How to use this guide
 
 * Start with **Installation** if you have not yet installed Karcytics.
 * Use **Getting Started** on your first launch to create a project and open the Hub.
@@ -46,4 +46,4 @@ Karcytics is a modular analysis hub built for laboratory scientists, students, a
 * Return to **FAQ & Troubleshooting** whenever something behaves unexpectedly.
 
 > [!NOTE]
-> The AI Assistant panel is part of Karcytics’s wider roadmap. In the current release, the AI chat window is not exposed in the main toolbar, but the rest of the application workflows remain fully usable.
+> Karcytics is designed to be easy to learn in a few guided steps. If you are brand new to the platform, follow the installation and first-run journey in order before exploring the deeper features.

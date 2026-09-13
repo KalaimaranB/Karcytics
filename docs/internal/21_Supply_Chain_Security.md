@@ -11,7 +11,7 @@ Karcytics utilizes asymmetric cryptography (Ed25519) and SHA-256 hashing to veri
 ### Validation Sequence
 
 1. **Manifest Binding**:
-   The verifier extracts `manifest_hash` from the parsed `security.json` ledger. It must exactly match the SHA-256 hash of the raw `pyproject.toml` file (or the legacy `manifest.json`).
+   The verifier extracts `manifest_hash` from the parsed `security.json` ledger. It must exactly match the SHA-256 hash of the raw `manifest.json` file.
 2. **Canonical Serialization**:
    The `security.json` structure is serialized into deterministic bytes using strict JSON canonicalization.
 3. **Signature Verification**:
