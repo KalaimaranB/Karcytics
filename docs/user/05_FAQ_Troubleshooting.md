@@ -8,7 +8,7 @@ This page helps you solve common problems quickly and points you to the right su
 
 ### Is Karcytics open source?
 
-Yes. The Karcytics core application is open-source. Some third-party plugins may carry their own licensing or usage terms.
+Yes. The Karcytics core application is open-source.
 
 ### Does Karcytics upload my data to the cloud?
 
@@ -18,32 +18,36 @@ No. Karcytics stores your projects and analysis data locally. Only plugin metada
 
 The core application is intentionally lightweight. Analysis modules are installed on demand so you only add the tools you need.
 
+### What if my operating system is not supported?
+
+If your OS is not currently compatible (for example, if you are running an older Intel Mac), please contact the developer at **[kalaimaranb25@gmail.com](mailto:kalaimaranb25@gmail.com)** to see if it's possible to release a compatible build for your system.
+
 ---
 
-## I cannot open a project
+## Why can't I open my project?
 
-### The project is locked
+### Why is my project locked?
 
 Karcytics creates `.karcytics.lock` in the project folder while the project is open.
 
 * If another Karcytics instance is already running, close it before reopening the project.
 * If Karcytics crashed and the lock file remains, remove `.karcytics.lock` only after confirming no instance is still using the project.
 
-### Permission denied
+### Why am I getting a "Permission denied" error?
 
 Make sure your operating system account has read and write access to the project folder and every file inside it. This is especially important with synced or network-mounted folders.
 
 ---
 
-## Plugin and module issues
+## How do I resolve plugin and module issues?
 
-### A plugin fails to install or update
+### Why does a plugin fail to install or update?
 
 * check your internet connection,
 * retry the installation from the **Marketplace**,
 * use **Repair** or **Repair All Plugins** if the module state is broken.
 
-### A plugin is blocked as untrusted
+### Why is a plugin blocked as untrusted?
 
 Karcytics does not run untrusted plugins.
 
@@ -51,7 +55,7 @@ Karcytics does not run untrusted plugins.
 * if you trust the source, approve the developer when prompted,
 * if you do not trust the source, do not load the plugin.
 
-### A plugin says it is outdated
+### Why does a plugin say it is outdated?
 
 This means the plugin requires a newer core version or module version.
 
@@ -61,15 +65,15 @@ This means the plugin requires a newer core version or module version.
 
 ---
 
-## Logs and diagnostics
+## How do I use logs and diagnostics?
 
-### View logs
+### How do I view application logs?
 
 Karcytics stores multiple types of runtime logs locally depending on the subsystem.
 
 * You can view these directly in the app by navigating to **Preferences → Privacy/Diagnostics → View Log Folder**.
 
-### When to report a bug
+### When and how should I report a bug?
 
 **The preferred method for reporting crashes is through Karcytics' built-in crash reporter.** If the app encounters a fatal error, you will be prompted to send a diagnostic report automatically via Sentry. We highly encourage opting into this feature!
 
@@ -82,23 +86,22 @@ If a plugin repeatedly fails to install or a project cannot be opened, please at
 
 ---
 
-## Application update issues
+## How do I fix application update issues?
 
-### The update banner does not appear
+### Why doesn't the update banner appear?
 
 Karcytics checks for core updates when the Hub starts.
 
 * if you do not see a banner, your current version is likely already up to date,
 * if you suspect a newer version exists, compare versions manually on the GitHub Releases page.
 
-### Skipping a version
+### How do I skip an update version?
 
 The update banner includes **Skip This Version** so you can postpone an upgrade. If you skip a version, the banner may not return for that version again.
 
 ---
 
-## Additional support
+## Where can I find additional support?
 
-* **GitHub Issues:** [https://github.com/KalaimaranB/Karcytics/issues](https://github.com/KalaimaranB/Karcytics/issues)
 * **Documentation portal:** [https://kalaimaranb.github.io/Karcytics/](https://kalaimaranb.github.io/Karcytics/)
 * **Email Support:** [kalaimaranb25@gmail.com](mailto:kalaimaranb25@gmail.com)
