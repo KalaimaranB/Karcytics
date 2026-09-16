@@ -73,11 +73,18 @@ This folder stores:
 
 On first launch, macOS may block the app because it is not signed through the App Store workflow.
 
-Try one of these:
+Please follow these steps:
 
-* Right-click (or Control-click) `Karcytics.app` and choose **Open**.
-* If prompted again, click **Open** to allow the app to run.
-* If that still fails, open **System Settings → Privacy & Security** and click **Open Anyway** next to the Karcytics warning.
+Do NOT click 'Move to Trash'! Instead, click 'Done'.
+![alt text](image/06_Installation/gatekeeper_macos.png)
+
+Open **System Settings** and click on **Privacy & Security**. Scroll down to the very bottom and click on **Open Anyway**.
+![alt text](image/06_Installation/system_settings.png)
+
+You will be prompted here again. Make sure to click **Open Anyway**. You may be asked to authenticate yourself to allow the bypass. 
+![alt text](image/06_Installation/final_mac_warning.png)
+
+You might be asked to allow Karcytics access to the local network. Click **Allow** to allow Karcytics access so that the marketplace can function properly. 
 
 > [!WARNING]
 > Only override Gatekeeper when you downloaded Karcytics from the official repository and release page.
