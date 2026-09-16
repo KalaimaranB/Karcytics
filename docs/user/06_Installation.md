@@ -6,7 +6,7 @@ Karcytics is distributed as a desktop application with a lightweight plugin ecos
 
 ## Before you begin
 
-Use the official GitHub release page for the latest stable download:
+Use the official GitHub release page for the latest download:
 
 * [Karcytics Releases](https://github.com/KalaimaranB/Karcytics/releases)
 
@@ -35,10 +35,11 @@ flowchart TD
 
 ---
 
-## Windows installation
+<details>
+<summary><strong>Windows installation</strong></summary>
 
 1. Download `Karcytics-Windows.zip` from the latest GitHub release.
-2. Extract the ZIP to a folder you control, for example `C:\Users\<you>\Documents\Karcytics`.
+2. Extract the ZIP to any location, for example `C:\Users\<you>\Documents\Karcytics`.
 3. Open the extracted folder and double-click `Karcytics.exe` to launch the app.
 4. If Windows SmartScreen shows a warning, choose **More info** and then **Run anyway** only if you trust the source.
 
@@ -56,9 +57,12 @@ This folder stores:
 * logs
 * project history metadata
 
+</details>
+
 ---
 
-## macOS installation
+<details>
+<summary><strong>macOS installation</strong></summary>
 
 1. Download `Karcytics-macOS.tar.gz` from the latest GitHub release.
 2. Double-click the downloaded file to unpack the `Karcytics.app` bundle.
@@ -69,14 +73,23 @@ This folder stores:
 
 On first launch, macOS may block the app because it is not signed through the App Store workflow.
 
-Try one of these:
+Please follow these steps:
 
-* Right-click (or Control-click) `Karcytics.app` and choose **Open**.
-* If prompted again, click **Open** to allow the app to run.
-* If that still fails, open **System Settings → Privacy & Security** and click **Open Anyway** next to the Karcytics warning.
+Do NOT click 'Move to Trash'! Instead, click 'Done'.
+![alt text](image/06_Installation/gatekeeper_macos.png)
+
+Open **System Settings** and click on **Privacy & Security**. Scroll down to the very bottom and click on **Open Anyway**.
+![alt text](image/06_Installation/system_settings.png)
+
+You will be prompted here again. Make sure to click **Open Anyway**. You may be asked to authenticate yourself to allow the bypass. 
+![alt text](image/06_Installation/final_mac_warning.png)
+
+You might be asked to allow Karcytics access to the local network. Click **Allow** to allow Karcytics access so that the marketplace can function properly. 
 
 > [!WARNING]
 > Only override Gatekeeper when you downloaded Karcytics from the official repository and release page.
+
+</details>
 
 
 ---
@@ -102,8 +115,9 @@ Karcytics itself is the host application. Analysis tools are delivered as plugin
 
 Karcytics uses a split-update model:
 
-* **Core app updates** are released from the GitHub Releases page.
-* **Module updates** are handled from the Plugin Store.
+* **Core app updates** are released from the GitHub Releases page. If you ever need to update your core app (you'll know by a banner in the hub), you will need to return to the releases page and follow the installation instructions. Make sure to delete the old core app before installing the new one! Your modules, preferences and other settings will not be affected.
+
+* **Module updates** are handled from the Plugin Store. If you ever need to update a module, you can do so from the Plugin Store by clicking on marketplace and simply clicking update! 
 
 ### Core app update notifications
 
