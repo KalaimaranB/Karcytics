@@ -358,25 +358,21 @@ def _register_default_icon_path() -> None:
     the Hub's own — for when the plugin doesn't ship one of its own.
 
     Resolved the same way as `KarcyticsApp`'s own window icon
-    (`karcytics.__main__`): `logo.icns` on macOS, `logo.ico` elsewhere,
-    found via `resource_path` so this works from both the dev tree and a
-    PyInstaller bundle (see `Karcytics.spec`'s `icon_file`/`datas`). Missing
-    in an unusual dev checkout is a no-op, not fatal — plugin windows simply
-    keep the generic Python icon they already have.
+    (`karcytics.__main__`) via `resource_manager.default_app_icon_path()`,
+    so this works from both the dev tree and a PyInstaller bundle (see
+    `Karcytics.spec`'s `icon_file`/`datas`). Missing in an unusual dev
+    checkout is a no-op, not fatal — plugin windows simply keep the generic
+    Python icon they already have.
     """
-    import sys
+    from karcytics.core.resource_manager import default_app_icon_path
 
-    from karcytics.core.resource_manager import resource_path
-
-    icon_file = "logo.icns" if sys.platform == "darwin" else "logo.ico"
-    icon_path = resource_path(icon_file)
+    icon_path = default_app_icon_path()
     if icon_path.exists():
         PluginUIDaemon.set_default_icon_path(str(icon_path))
     else:
         logger.warning(
-            "Default plugin icon '%s' not found at %s; isolated plugin "
-            "windows will fall back to the generic Python icon unless they "
-            "ship their own.",
-            icon_file,
+            "Default plugin icon not found at %s; isolated plugin windows "
+            "will fall back to the generic Python icon unless they ship "
+            "their own.",
             icon_path,
         )

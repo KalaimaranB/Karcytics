@@ -32,3 +32,19 @@ def resource_path(relative_path: str | Path) -> Path:
             return alt_path
 
     return full_path
+
+
+def default_app_icon_path() -> Path:
+    """Resolve the Hub's own icon file.
+
+    It resolves to `logo.icns` on macOS and `logo.ico` elsewhere — the same file
+    `Karcytics.spec` bundles as `icon_file` and copies to the frozen app's root
+    unrenamed, so this matches both a dev checkout (where only `logo.icns`/`logo.ico`
+    exist at the repo root, not `icon.icns`) and a PyInstaller build.
+
+    Shared by `karcytics.__main__` (the Hub's own window/Dock icon in dev —
+    see `KarcyticsApp.__init__`) and `core_services_bootstrap` (the fallback
+    every isolated plugin's window uses when it doesn't ship its own).
+    """
+    icon_file = "logo.icns" if sys.platform == "darwin" else "logo.ico"
+    return resource_path(icon_file)
