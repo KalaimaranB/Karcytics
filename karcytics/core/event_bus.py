@@ -45,6 +45,7 @@ class KarcyticsEvent(Enum):
     ACADEMY_SUBTASK_COMPLETED = auto()  # args: (subtask_id: str, remaining_count: int)
     ACADEMY_CHECKPOINT_SAVED = auto()  # args: (course_id: str, checkpoint_path: str)
     ACADEMY_COURSE_PREPARE_PROJECT = auto()  # args: (course_id: str)
+    ACADEMY_REVIEW_STATE_CHANGED = auto()  # args: (step: BaseStep | None, is_reviewing: bool)
 
     # User action events (used by WaitForEventStep in the tutorial engine)
     STORE_OPENED = auto()  # args: () — Marketplace dialog was opened

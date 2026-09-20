@@ -35,7 +35,7 @@ flowchart TD
 
 ---
 
-<details>
+<details markdown="1">
 <summary><strong>Windows installation</strong></summary>
 
 1. Download `Karcytics-Windows.zip` from the latest GitHub release.
@@ -61,7 +61,7 @@ This folder stores:
 
 ---
 
-<details>
+<details markdown="1">
 <summary><strong>macOS installation</strong></summary>
 
 1. Download `Karcytics-macOS.tar.gz` from the latest GitHub release.
