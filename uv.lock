@@ -495,7 +495,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "karcytics-sdk"
-version = "2.1.6"
+version = "2.1.7"
 source = { editable = "../Karcytics-SDK" }
 dependencies = [
     { name = "cryptography" },
@@ -504,6 +504,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pillow" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
     { name = "pyqt6" },
     { name = "requests" },
     { name = "scikit-image" },
@@ -520,6 +521,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pillow", specifier = ">=12.3.0" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'", specifier = ">=12.2.1" },
     { name = "pyqt6", specifier = ">=6.5.0" },
     { name = "requests", specifier = ">=2.28.0" },
     { name = "scikit-image", specifier = ">=0.26.0" },

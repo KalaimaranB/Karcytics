@@ -226,6 +226,14 @@ def start_core_services() -> CoreServicesServer:  # noqa: C901, PLR0915
         # directly on the CoreServicesServer handler thread.
         return current_theme_colors()
 
+    def _handle_get_current_theme_name(_kwargs: dict[str, Any]) -> dict[str, str]:
+        # Lets an isolated plugin's Preferences > Theme page pre-select the
+        # Hub's active theme the same way the Hub's own ThemeSettingsWidget
+        # does in-process (`theme_manager.current_theme_name == name`) —
+        # `theme.get_current_colors` alone can't answer "which theme is
+        # this", only what its colors resolve to.
+        return {"name": hub_theme_manager.current_theme_name}
+
     def _handle_list_themes(_kwargs: dict[str, Any]) -> dict[str, list[list[str]]]:
         # Read-only disk/dict work, no widget touched — safe to run directly
         # on the CoreServicesServer handler thread, unlike switch_theme below.
@@ -322,6 +330,7 @@ def start_core_services() -> CoreServicesServer:  # noqa: C901, PLR0915
     server.register("event.subscribe", _handle_event_subscribe)
     server.register("event.unsubscribe", _handle_event_unsubscribe)
     server.register("theme.get_current_colors", _handle_get_current_colors)
+    server.register("theme.get_current_theme_name", _handle_get_current_theme_name)
     server.register("theme.list_categorized_themes", _handle_list_themes)
     server.register("theme.switch_theme", _handle_switch_theme)
     server.register("menu.get_about_karcytics", _handle_get_about_karcytics)
@@ -337,5 +346,37 @@ def start_core_services() -> CoreServicesServer:  # noqa: C901, PLR0915
 
     server.start()
     PluginUIDaemon.set_core_services(server.port, server.token)
+    _register_default_icon_path()
     logger.info("CoreServicesServer started on port %d", server.port)
     return server
+
+
+def _register_default_icon_path() -> None:
+    """Register the default icon path for isolated plugins.
+
+    Gives every isolated plugin's window/menu-bar/Dock a fallback icon —
+    the Hub's own — for when the plugin doesn't ship one of its own.
+
+    Resolved the same way as `KarcyticsApp`'s own window icon
+    (`karcytics.__main__`): `logo.icns` on macOS, `logo.ico` elsewhere,
+    found via `resource_path` so this works from both the dev tree and a
+    PyInstaller bundle (see `Karcytics.spec`'s `icon_file`/`datas`). Missing
+    in an unusual dev checkout is a no-op, not fatal — plugin windows simply
+    keep the generic Python icon they already have.
+    """
+    import sys
+
+    from karcytics.core.resource_manager import resource_path
+
+    icon_file = "logo.icns" if sys.platform == "darwin" else "logo.ico"
+    icon_path = resource_path(icon_file)
+    if icon_path.exists():
+        PluginUIDaemon.set_default_icon_path(str(icon_path))
+    else:
+        logger.warning(
+            "Default plugin icon '%s' not found at %s; isolated plugin "
+            "windows will fall back to the generic Python icon unless they "
+            "ship their own.",
+            icon_file,
+            icon_path,
+        )

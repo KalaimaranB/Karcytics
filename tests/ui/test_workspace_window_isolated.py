@@ -31,6 +31,7 @@ def core_services():
     yield server
     PluginUIDaemon._core_services_port = None
     PluginUIDaemon._core_services_token = None
+    PluginUIDaemon._core_icon_path = None
     server.stop()
 
 
