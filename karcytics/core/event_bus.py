@@ -36,7 +36,7 @@ class KarcyticsEvent(Enum):
     # System Events
     THEME_CHANGED = auto()  # args: (theme_name: str)
     ERROR_OCCURRED = auto()  # args: (error_data: dict)
-    SYSTEM_WARNING = auto()  # args: (message: str)
+    SYSTEM_WARNING = auto()  # args: (message: str, icon: str, color: str, duration_ms: int)
     CORE_UPDATE_AVAILABLE = auto()  # args: (remote_version: str, download_url: str)
 
     # Academy & Tutorial Engine
