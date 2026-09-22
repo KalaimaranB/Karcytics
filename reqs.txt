@@ -274,7 +274,9 @@ pyobjc-core==12.2.1 ; sys_platform == 'darwin' \
 pyobjc-framework-cocoa==12.2.1 ; sys_platform == 'darwin' \
     --hash=sha256:28b9b8bab1c36efb94744786918752d0c1842f5fbb67e7d5ca97b5f736512080 \
     --hash=sha256:b94b37fe5730e5ae1fb0052912cd174e6ec329b0bfba4a012ae5db1014b5864b
-    # via karcytics
+    # via
+    #   karcytics
+    #   karcytics-sdk
 pyparsing==3.3.2 \
     --hash=sha256:850ba148bd908d7e2411587e247a1e4f0327839c40e2e5e6d05a007ecc69911d \
     --hash=sha256:c777f4d763f140633dcb6d8a3eda953bf7a214dc4eff598413c070bcdc117cbc

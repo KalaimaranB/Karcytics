@@ -98,6 +98,31 @@ class AutoReportHandler(logging.Handler):
             self.handleError(record)
 
 
+class WarningToastHandler(logging.Handler):
+    """Intercepts WARNING logs and routes them to the UI as toasts."""
+
+    def __init__(self) -> None:  # noqa: D107
+        """Initialize the handler to forward warning-level records to a toast notification."""
+        super().__init__(level=logging.WARNING)
+
+    def emit(self, record: logging.LogRecord) -> None:  # noqa: D102
+        """Forward a log record to the event bus as a system warning."""
+        # Prevent recursion and spam from third-party libraries
+        if not record.name.startswith("karcytics"):
+            return
+        if record.levelno != logging.WARNING:
+            return
+        if record.name in ("karcytics.core.diagnostics", "karcytics.core.event_bus"):
+            return
+
+        try:
+            msg = self.format(record)
+            # Route to event bus
+            event_bus.emit(KarcyticsEvent.SYSTEM_WARNING, msg, "⚠️", "#E5C07B", 4000)
+        except Exception:
+            self.handleError(record)
+
+
 class DiagnosticEngine:
     """Central nervous system for application health and error reporting."""
 
@@ -132,6 +157,11 @@ class DiagnosticEngine:
         self.auto_reporter = AutoReportHandler(self)
         self.auto_reporter.setFormatter(logging.Formatter("%(message)s"))
         logging.getLogger().addHandler(self.auto_reporter)
+
+        # Attach WarningToastHandler
+        self.warning_toaster = WarningToastHandler()
+        self.warning_toaster.setFormatter(logging.Formatter("%(message)s"))
+        logging.getLogger().addHandler(self.warning_toaster)
 
         # Throttling state
         self._last_error_sig: str | None = None
