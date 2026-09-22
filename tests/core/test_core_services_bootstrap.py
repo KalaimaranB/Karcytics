@@ -60,6 +60,7 @@ def _reset_core_services_port():
     yield
     PluginUIDaemon._core_services_port = None
     PluginUIDaemon._core_services_token = None
+    PluginUIDaemon._core_icon_path = None
 
 
 @pytest.fixture(autouse=True)
@@ -93,6 +94,20 @@ def test_start_core_services_records_port_and_token_on_plugin_ui_daemon():
     try:
         assert PluginUIDaemon._core_services_port == server.port
         assert PluginUIDaemon._core_services_token == server.token
+    finally:
+        server.stop()
+
+
+def test_start_core_services_records_default_icon_path_on_plugin_ui_daemon():
+    """Every isolated plugin window falls back to the Hub's own icon (see
+    ui_daemon_runtime._resolve_app_icon_path) when it doesn't ship its own —
+    start_core_services() must register that fallback path exactly once,
+    same as it already does for the CoreServicesServer port/token.
+    """
+    server = start_core_services()
+    try:
+        assert PluginUIDaemon._core_icon_path is not None
+        assert Path(PluginUIDaemon._core_icon_path).exists()
     finally:
         server.stop()
 
@@ -195,6 +210,25 @@ def test_get_current_colors_handler_returns_the_hub_colors(qapp):  # noqa: ARG00
     assert result.get("BG_DARKEST") == Colors.BG_DARKEST
     for value in result.values():
         assert isinstance(value, str)
+
+
+def test_get_current_theme_name_handler_returns_the_hub_theme_name(qapp):  # noqa: ARG001
+    """An isolated plugin's Preferences > Theme page (SDKThemePreferencesPage
+    in the SDK) needs this to pre-select the Hub's active theme the same way
+    the Hub's own in-process ThemeSettingsWidget does via
+    `theme_manager.current_theme_name == name` — `theme.get_current_colors`
+    alone can't answer "which theme is this", only what its colors resolve to.
+    """
+    from karcytics.ui.theme import theme_manager as hub_theme_manager
+
+    server = start_core_services()
+    try:
+        client = CoreServicesClient(server.port, token=server.token)
+        result = client.call("theme.get_current_theme_name")
+    finally:
+        server.stop()
+
+    assert result == {"name": hub_theme_manager.current_theme_name}
 
 
 def test_switch_theme_handler_runs_on_the_gui_thread(qapp, tmp_path):  # noqa: ARG001

@@ -65,6 +65,31 @@ class KarcyticsApp:
         with contextlib.suppress(ImportError):
             import PyQt6.QtWebEngineWidgets  # noqa: F401
 
+        # A PyInstaller-frozen build runs as a real .app bundle, so macOS
+        # already reads CFBundleName/CFBundleIconFile from its Info.plist —
+        # the menu bar and Dock icon are correct without any of this. A dev
+        # launch (`karcytics` console script, `python -m karcytics`) is a
+        # bare, unbundled process, exactly like an isolated plugin's own
+        # `python3 ui_daemon.py` subprocess (see `karcytics_sdk.plugin
+        # .patch_macos_bundle_name`'s docstring for the full mechanism) —
+        # without this same patch, macOS shows "python"/"Python" as the bold
+        # menu-bar title instead of "Karcytics". Must run before
+        # QApplication() below: that's what spins up Cocoa's native
+        # application menu.
+        is_frozen = getattr(sys, "frozen", False)
+        if sys.platform == "darwin" and not is_frozen:
+            # `logging` (imported at module scope) can't be used unqualified
+            # here: the `except` block below this method also does `import
+            # logging`, which makes Python treat the name as local to the
+            # whole `__init__` method — so using it before that later
+            # statement runs raises UnboundLocalError. A local import here
+            # too, same as that block already does, sidesteps it.
+            import logging
+
+            from karcytics_sdk.plugin import patch_macos_bundle_name
+
+            patch_macos_bundle_name("Karcytics", logging.getLogger(__name__))
+
         print("1. Initializing QApplication...")
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
         self.app = QApplication(sys.argv)
@@ -78,12 +103,15 @@ class KarcyticsApp:
         # --- BRANDING: Set Global Application Icon ---
         from PyQt6.QtGui import QIcon
 
-        from karcytics.core.resource_manager import resource_path
+        from karcytics.core.resource_manager import default_app_icon_path
 
-        # On macOS, the Dock icon is natively and perfectly managed by the .app bundle's Info.plist.
-        # Setting a window icon with .icns can overwrite and reset the native round icon to a generic square if Qt's icns plugin is not loaded.  # noqa: E501
-        if sys.platform != "darwin":
-            icon_path = resource_path("icon.icns")
+        # On macOS, a frozen build's Dock icon is natively and perfectly managed by the
+        # .app bundle's Info.plist — setting a window icon with .icns on top of that can
+        # overwrite and reset the native round icon to a generic square if Qt's icns
+        # plugin isn't loaded. A dev launch has no such bundle, so it needs this to show
+        # anything other than the generic Python icon at all.
+        if sys.platform != "darwin" or not is_frozen:
+            icon_path = default_app_icon_path()
             if icon_path.exists():
                 self.app.setWindowIcon(QIcon(str(icon_path)))
 

@@ -155,7 +155,7 @@ class ErrorReportDialog(QDialog):
         # Actions
         btn_layout = QHBoxLayout()
 
-        self.send_btn = QPushButton("Send to Sentry")
+        self.send_btn = QPushButton("Send to Developer")
         self.send_btn.clicked.connect(self._send_report)
 
         self.close_btn = QPushButton("Dismiss")
