@@ -290,10 +290,14 @@ jobs:
 
       - name: Run E2E Smoke Test (macOS)
         if: runner.os == 'macOS'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: ./dist/Karcytics.app/Contents/MacOS/Karcytics --smoke-test flow_cytometry karcytics/tutorials/assets/demo_tutorial.fcs
 
       - name: Run E2E Smoke Test (Windows)
         if: runner.os == 'Windows'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: .\dist\Karcytics\Karcytics.exe --smoke-test flow_cytometry karcytics/tutorials/assets/demo_tutorial.fcs
 
       - name: Compress Artifacts (Windows)

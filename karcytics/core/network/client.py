@@ -1,7 +1,9 @@
 """Centralized HTTP client for Karcytics."""
 
 import logging
+import os
 from collections.abc import Mapping
+from urllib.parse import urlparse
 
 import certifi
 import requests
@@ -41,6 +43,11 @@ class NetworkClient:
         "Pragma": "no-cache",
     }
 
+    # GitHub's unauthenticated REST API rate limit is a tight 60 req/hour per
+    # source IP — easily exhausted on shared CI runner IP pools. Authenticating
+    # with a token (e.g. the CI-provided GITHUB_TOKEN) raises that to 5000/hour.
+    _GITHUB_API_HOST = "api.github.com"
+
     @classmethod
     def get(
         cls,
@@ -62,6 +69,10 @@ class NetworkClient:
                 requests.Response: The HTTP response.
         """
         headers = cls.DEFAULT_HEADERS.copy()
+        if urlparse(url).hostname == cls._GITHUB_API_HOST:
+            token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
         if extra_headers:
             headers.update(extra_headers)
 
