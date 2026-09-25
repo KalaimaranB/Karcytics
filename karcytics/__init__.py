@@ -1,6 +1,6 @@
 """Karcytics — Bio Analysis Made Simple.
 
-An open-source, intuitive platform for lab students
+A free, intuitive platform for lab students
 and professionals. Automates tedious bio analysis workflows
 through a modern desktop interface.
 

@@ -6,9 +6,9 @@ This page helps you solve common problems quickly and points you to the right su
 
 ## General questions
 
-### Is Karcytics open source?
+### Is Karcytics free to use?
 
-Yes. The Karcytics core application is open-source.
+Yes, for academic and personal use — always. Karcytics is source-available under the [PolyForm Noncommercial License](https://polyformproject.org/licenses/noncommercial/1.0.0): students, researchers, educators, and institutions can use, modify, and study the code at no cost, indefinitely. Commercial use requires a separate paid license (not yet available).
 
 ### Does Karcytics upload my data to the cloud?
 

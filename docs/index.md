@@ -1,6 +1,6 @@
 # Karcytics Documentation Portal
 
-Welcome to the official **Karcytics Documentation Portal**. Karcytics is an open-source biological analysis suite designed for researchers, software developers, and academic institutions.
+Welcome to the official **Karcytics Documentation Portal**. Karcytics is a biological analysis suite, free for researchers, students, and academic institutions, designed for reproducible lab workflows.
 
 ---
 
