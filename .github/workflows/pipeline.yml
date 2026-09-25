@@ -462,7 +462,7 @@ jobs:
           body: |
             ## Karcytics ${{ needs.check-version.outputs.version }}
 
-            An open-source platform for biological data analysis and visualization, built around a modular plugin architecture for reproducible lab workflows.
+            A platform for biological data analysis and visualization, free for academic and personal use, built around a modular plugin architecture for reproducible lab workflows.
 
             ### 📦 Install
             New here? Start with the [Installation Guide](https://kalaimaranb.github.io/Karcytics/user/06_Installation/).
