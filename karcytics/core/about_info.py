@@ -17,10 +17,13 @@ KARCYTICS_ABOUT: dict[str, str] = {
     "version": AppConfig.CORE_VERSION,
     "tagline": "Bio Analysis Made Simple",
     "description": (
-        "An open-source, intuitive platform designed to streamline laboratory "
+        "A free, intuitive platform designed to streamline laboratory "
         "data analysis for students, researchers, and professionals."
     ),
-    "copyright": "© 2026 Karcytics Contributors. Licensed under the MIT License.",
+    "copyright": (
+        "© 2026 Karcytics Contributors. Free for academic & personal use under "
+        "the PolyForm Noncommercial License 1.0.0."
+    ),
 }
 
 DEVELOPER_ABOUT: dict[str, str] = {

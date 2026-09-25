@@ -48,7 +48,7 @@ mkdocs build    # generate site/ for CI or local inspection
 4. Drag `Karcytics.app` into your **Applications** folder.
 
 **⚠️ macOS Security Notice (Gatekeeper):**
-Because Karcytics is an open-source application, macOS may initially block it from opening, displaying a warning that the developer cannot be verified. To safely bypass this:
+Because Karcytics isn't yet notarized with an Apple Developer ID, macOS may initially block it from opening, displaying a warning that the developer cannot be verified. To safely bypass this:
 * **Method 1:** Right-click (or Control-click) `Karcytics.app` and select **Open**. Click **Open** again on the pop-up warning.
 * **Method 2:** Try opening the app normally. When it fails, open your Mac's **System Settings** > **Privacy & Security**, scroll down to the Security section, and click **Open Anyway** next to the Karcytics notification.
 
