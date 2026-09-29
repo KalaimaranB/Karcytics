@@ -30,6 +30,12 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: license-compliance
+        name: License Compliance Check
+        entry: uv run python scripts/check_license_compliance.py
+        language: system
+        pass_filenames: false
+
       - id: pytest
         name: Pytest Test Suite
         entry: env QT_QPA_PLATFORM=offscreen uv run python -m pytest tests/core/ tests/sdk/ tests/test_boot.py tests/test_sanity.py tests/test_resources.py tests/test_sdk_events.py tests/test_sdk_docs.py --tb=short -q --cov=karcytics --cov-report=term-missing

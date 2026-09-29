@@ -61,12 +61,18 @@ class MenuManager:
         )
 
         # --- Help Menu ---
+        # mac_no_role=True: on macOS, QAction.MenuRole.AboutRole /
+        # ApplicationSpecificRole promote actions into the process-wide Apple
+        # menu. WorkspaceWindow is re-created on every project open, so without
+        # this flag each open cycle appends another "About the Developer" (and
+        # "About Karcytics") to that shared app menu, producing duplicates.
         builder.add_help_menu(
             docs_cb=self.open_help_center,
             wiki_cb=self.open_wiki_online,
             about_cb=self.show_about,
             about_dev_cb=self.show_about_developer,
             onboarding_cb=mw.restart_core_intro if hasattr(mw, "restart_core_intro") else None,
+            mac_no_role=True,
         )
 
     def open_help_center(self):
