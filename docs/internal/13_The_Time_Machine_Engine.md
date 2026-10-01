@@ -35,6 +35,8 @@ The history tracking is partitioned per analysis module. Each module manages its
 This isolation ensures that performing an undo operation in one workspace (e.g., Western Blot) does not revert unrelated changes in another open workspace (e.g., Flow Cytometry).
 The global `HistoryManager` routes keyboard events (e.g., Ctrl+Z) to the currently active module's stack.
 
+Isolated plugins (their own process and `.venv`) don't use `HistoryManager`. Each keeps an SDK `UndoHistory` in its own process, and its window's Edit menu handles Cmd/Ctrl+Z itself. See doc 16.
+
 ---
 
 ## Session-Only State (No Serialization)
