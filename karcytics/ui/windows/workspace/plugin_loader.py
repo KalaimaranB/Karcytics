@@ -356,7 +356,7 @@ class PluginLoaderManager:
             active_course
             and active_course.id == "core_intro_v1"
             and current_step
-            and current_step.id == "ws_open_module_action"
+            and current_step.id in ("ws_open_module_action", "module_phase_wait")
         )
 
         try:

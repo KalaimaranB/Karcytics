@@ -319,10 +319,21 @@ class WorkspaceWindow(QMainWindow):
         """
         super().timerEvent(event)
         active_overlay = self._active_overlay()
-        if hasattr(self, "home_tutorial_overlay") and self.home_tutorial_overlay.isVisible():
-            store_active = active_overlay != self.home_tutorial_overlay
-            self.home_tutorial_overlay.set_dark_mode(store_active)
-        if not active_overlay or not active_overlay.isVisible():
+        home_overlay = getattr(self, "home_tutorial_overlay", None)
+        if home_overlay is not None:
+            try:
+                if home_overlay.isVisible():
+                    store_active = active_overlay != home_overlay
+                    home_overlay.set_dark_mode(store_active)
+            except RuntimeError:
+                pass
+
+        if not active_overlay:
+            return
+        try:
+            if not active_overlay.isVisible():
+                return
+        except RuntimeError:
             return
         from karcytics_sdk.plugin.tutorial_models import (
             ForcedInteractionStep,
