@@ -323,15 +323,17 @@ class TestPluginBase:
     def test_plugin_creation(self, qtbot):
         plugin = self.MockPlugin()
         assert plugin.plugin_id == "test_plugin"
-        assert plugin.history is not None
+        assert plugin.undo_history is not None
 
     def test_plugin_push_state(self, qtbot):
         plugin = self.MockPlugin()
+        # First push sets the baseline; second push creates an undoable step.
         plugin.state.counter = 42
         plugin.push_state()
+        plugin.state.counter = 99
+        plugin.push_state()
 
-        history = plugin.history.get_module_history("test_plugin")
-        assert len(history.undo_stack) == 1
+        assert plugin.undo_history.can_undo()
 
     def test_plugin_undo(self, qtbot):
         plugin = self.MockPlugin()

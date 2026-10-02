@@ -85,8 +85,13 @@ class WorkflowPropertiesDialog(QDialog):
         form_layout = QFormLayout()
         form_layout.setSpacing(10)
 
-        self.lbl_name = QLabel(self.metadata.get("name", "Untitled"))
-        form_layout.addRow("Name:", self.lbl_name)
+        self.edit_name = QLineEdit(self.metadata.get("name", "Untitled"))
+        self.edit_name.setPlaceholderText("Workflow name")
+        theme_manager.apply_style(
+            self.edit_name,
+            f"background: {Colors.BG_MEDIUM}; border: 1px solid {Colors.BORDER}; color: {Colors.FG_PRIMARY}; padding: 4px; border-radius: 4px;",
+        )
+        form_layout.addRow("Name:", self.edit_name)
 
         lbl_size = QLabel(wf_size_str)
         theme_manager.apply_style(lbl_size, f"color: {Colors.FG_SECONDARY};")
@@ -231,11 +236,13 @@ class WorkflowPropertiesDialog(QDialog):
         return f"{size:.1f} TB"
 
     def _on_save_metadata(self) -> None:
+        new_name = self.edit_name.text().strip() or "Untitled"
         tags_raw = self.edit_tags.text()
         tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
         desc = self.edit_desc.toPlainText().strip()
 
         new_metadata = dict(self.metadata)
+        new_metadata["name"] = new_name
         new_metadata["tags"] = tags
         new_metadata["description"] = desc
 
@@ -247,9 +254,11 @@ class WorkflowPropertiesDialog(QDialog):
                 self.filename,
                 self.attachments,
             )
+            self.metadata["name"] = new_name
             self.metadata["tags"] = tags
             self.metadata["description"] = desc
             self.full_data["metadata"] = self.metadata
+            self.setWindowTitle(f"Workflow Properties: {new_name}")
             self.workflow_updated.emit()
             show_info(self, "Success", "Workflow metadata updated successfully.")
         except Exception as e:

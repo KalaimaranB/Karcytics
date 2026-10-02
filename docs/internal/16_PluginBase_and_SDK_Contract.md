@@ -43,34 +43,66 @@ class PluginBase(QWidget):
     def set_state(self, state: PluginState) -> None: ...
 
     # Provided, ready to use:
-    def push_state(self) -> None: ...  # snapshot get_state() into undo history
-    def undo(self) -> None: ...
-    def redo(self) -> None: ...
+    def push_state(self, label: str = "") -> None: ...  # record one named undo step
+    def undo(self) -> bool: ...  # True if a step was undone
+    def redo(self) -> bool: ...
     def can_undo(self) -> bool: ...
     def can_redo(self) -> bool: ...
+    def undo_text(self) -> str: ...  # "Undo Delete Gate" — Edit menu text
+    def redo_text(self) -> str: ...
+
+    undo_history: UndoHistory  # property; created on first use
+
+    def bind_undo_history(self, history: UndoHistory, restore) -> None: ...
     def cleanup(self) -> None: ...  # RAII-style resource release via ResourceInspector
     def publish_event(self, topic: str, data: Any = None) -> None: ...  # CentralEventBus
     def subscribe_event(self, topic: str, callback) -> None: ...  # CentralEventBus
 ```
 
 `get_state()`/`set_state()` work in terms of `PluginState`
-(`karcytics_sdk/plugin/state.py`), not a raw dict — `push_state()` calls
-`.to_dict()` on it before handing the result to `HistoryManager`, and
-`undo()`/`redo()` reconstruct via `.from_dict()` on the same class
-`get_state()` returned. `self.state_changed` (proxied through `__getattr__`
-to `self.signals`, a `PluginSignals` instance covering
-`status`/`state_changed`/`analysis_started`/`analysis_finished`/
+(`karcytics_sdk/plugin/state.py`), not a raw dict. `self.state_changed`
+(proxied through `__getattr__` to `self.signals`, a `PluginSignals` instance
+covering `status`/`state_changed`/`analysis_started`/`analysis_finished`/
 `analysis_error`, etc.) fires automatically from `push_state()`/`undo()`/`redo()`.
 
-`self.history` lazily resolves the Hub's real `HistoryManager` — but only
-when `karcytics.core.history_manager` is actually importable. In a genuinely
-isolated plugin's own `.venv` (see doc 24), it never is, so this falls back
-to an in-memory `MockHistoryManager` instead — undo/redo works locally
-within that process but nothing persists across the plugin's own restarts.
-This is the same "resolves differently per process, transparently" pattern
-`theme_fallback.py` and the Academy engine use (see doc 27) — not a bug
-specific to this class, and not something a plugin author needs to branch
-on.
+### Undo/redo
+
+The history lives in the plugin's own process, as an SDK `UndoHistory`
+(`karcytics_sdk/plugin/history.py`). It never uses the Hub's
+`HistoryManager`, which an isolated plugin can't import (see doc 24).
+`UndoHistory` stores labelled snapshots, refuses to record a snapshot equal
+to the current one, and tracks a saved ("clean") revision, so undoing back
+to the last save reads as unsaved-changes-free again.
+
+- **Default:** `push_state(label)` records `get_state().to_dict()` as one
+  step, and `undo()`/`redo()` restore it via `set_state(type(state).from_dict(...))`.
+  The first `push_state()` only sets the baseline. Call it once per finished
+  user action, not on every tick of a drag.
+- **Own state store:** a plugin that restores state in place calls
+  `bind_undo_history(history, restore)` with its own `UndoHistory` and a
+  `restore(snapshot)` callable. Flow Cytometry does this with its
+  `FlowStore` (its `docs/developer/10_STATE_UNDO_AND_PERSISTENCE.md`).
+- If `restore` raises, the history pointer moves back, the error is logged
+  and `undo()`/`redo()` return `False`, so the history never disagrees with
+  the live state.
+- Any history change emits `undo_available`, `redo_available` and
+  `undo_state_changed`.
+
+The isolated window (`ui_daemon_runtime.py`) gives every plugin an
+Edit → Undo/Redo menu: Cmd+Z / Cmd+Shift+Z on macOS, Ctrl+Z / Ctrl+Y
+(and Ctrl+Shift+Z) elsewhere. Item text and enabled state follow
+`undo_text()`/`can_undo()`. While a text field has focus, the shortcut
+undoes that field's own typing instead.
+
+### Closing and autosave
+
+- A user-initiated close of the isolated window first calls
+  `panel.confirm_close()` if the panel defines it; returning `False` keeps the
+  window open, for example to offer Save / Discard / Cancel. A close the Hub
+  requests is never vetoed.
+- `setup_workflow_autosave(..., has_unsaved_changes=callable)` skips an
+  autosave tick, including its reminder toast, when the callable reports
+  nothing to save.
 
 ## Minimal example
 
