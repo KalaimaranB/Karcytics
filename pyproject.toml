@@ -38,6 +38,7 @@ dependencies = [
     # Core Utils
     "psutil>=6.0",
     "requests>=2.31",
+    "urllib3>=2.8.0",  # security: fix PYSEC-2026-4175/4176/4177 (CVEs in 2.7.x)
     "cryptography>=50.0.0",
     "markdown",
     "pygments",

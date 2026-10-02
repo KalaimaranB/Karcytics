@@ -50,7 +50,9 @@ class PluginBase(QWidget):
     def can_redo(self) -> bool: ...
     def undo_text(self) -> str: ...  # "Undo Delete Gate" — Edit menu text
     def redo_text(self) -> str: ...
+
     undo_history: UndoHistory  # property; created on first use
+
     def bind_undo_history(self, history: UndoHistory, restore) -> None: ...
     def cleanup(self) -> None: ...  # RAII-style resource release via ResourceInspector
     def publish_event(self, topic: str, data: Any = None) -> None: ...  # CentralEventBus
