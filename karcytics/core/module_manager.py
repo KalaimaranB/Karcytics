@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from karcytics_sdk.host import TrustManager
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QWidget
+    from PySide6.QtWidgets import QWidget
 
 # HACK: Import the base plugins namespace so we can expand it
 import karcytics.plugins

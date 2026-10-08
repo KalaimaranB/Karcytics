@@ -1,7 +1,7 @@
 """A high-visibility security dialog for accepting untrusted developer identities."""
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from karcytics.ui.theme import Colors, theme_manager
 

@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 from karcytics.ui.theme import theme_manager
 from karcytics.ui.windows.workspace_window import _PAGE_ANALYSIS, _PAGE_HOME, WorkspaceWindow
@@ -44,7 +44,7 @@ class TestWorkspaceWindow:
     def test_open_module_success(self, mock_err, window, qtbot):
         manifest = {"id": "plugin_a", "display_name": "Plugin A", "name": "Plugin A", "icon": "A"}
 
-        # Mock UI loader with a real QWidget to avoid PyQt type issues
+        # Mock UI loader with a real QWidget to avoid Qt type issues
         class MockPanel(QWidget):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)

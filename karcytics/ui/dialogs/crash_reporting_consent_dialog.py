@@ -6,8 +6,8 @@ and two choices: Enable or No Thanks. Either answer is persisted so the
 dialog never re-appears.
 """
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,

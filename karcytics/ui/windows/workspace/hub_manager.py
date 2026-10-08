@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Callable
 
-from PyQt6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow
 
 from karcytics.shared.ui.alerts import ask_question, show_error
 

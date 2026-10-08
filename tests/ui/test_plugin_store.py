@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from karcytics_sdk.plugin import DangerButton, ModuleCard, PrimaryButton
-from PyQt6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QPushButton
 
 from karcytics.core.event_bus import KarcyticsEvent, event_bus
 from karcytics.ui.dialogs.plugin_store import PluginStoreDialog
@@ -20,7 +20,7 @@ class TestPluginStore:
         mock_updater.get_trusted_developers.return_value = []
 
         # Force QThread to run synchronously for tests
-        from PyQt6.QtCore import QThread
+        from PySide6.QtCore import QThread
 
         monkeypatch.setattr(QThread, "start", lambda self: self.run())
 
@@ -82,7 +82,7 @@ class TestPluginStore:
 
             # Simulate the "Nervous System" pulse
             event_bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "test_id")
-            from PyQt6.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
 
             QApplication.processEvents()
 
@@ -98,7 +98,7 @@ class TestPluginStore:
 
             # Simulate the "Nervous System" pulse
             event_bus.emit(KarcyticsEvent.PLUGIN_REMOVED, "test_id")
-            from PyQt6.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
 
             QApplication.processEvents()
 
@@ -144,7 +144,7 @@ class TestPluginStore:
         with patch.object(store.updater, "evaluate_store_state", return_value=mock_inventory):
             store._load_store_data()
             card = store.findChild(ModuleCard)
-            from PyQt6.QtWidgets import QLabel
+            from PySide6.QtWidgets import QLabel
 
             labels = card.findChildren(QLabel)
             author_text = [lbl.text() for lbl in labels if "Alice" in lbl.text()]

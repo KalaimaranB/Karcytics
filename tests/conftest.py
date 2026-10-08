@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 # Force Qt headless mode for CI and macOS test environments.
-# This must be set before PyQt6 is imported by any test module.
+# This must be set before PySide6 is imported by any test module.
 if os.environ.get("QT_QPA_PLATFORM") is None:
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -17,11 +17,11 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Early WebEngine and OpenGL Context setup to avoid QApplication import order errors
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 
 QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
-import PyQt6.QtWebEngineWidgets  # noqa: F401, E402
+import PySide6.QtWebEngineWidgets  # noqa: F401, E402
 
 # Configure logging for tests
 logging.basicConfig(level=logging.DEBUG, format="%(name)s - %(levelname)s - %(message)s")
@@ -37,9 +37,9 @@ def pytest_configure(config):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Exit cleanly to avoid PyQt6 teardown segfaults on macOS.
+    """Exit cleanly to avoid PySide6 teardown segfaults on macOS.
 
-    PyQt6 on macOS can segfault during cleanup when destroying the QApplication.
+    PySide6 on macOS can segfault during cleanup when destroying the QApplication.
     This hook lets pytest exit before C++ destructors run.
     """
     # os._exit(exitstatus)

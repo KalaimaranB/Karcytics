@@ -1,9 +1,9 @@
 import math
 import random
 
-from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
-from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QRadialGradient
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QRadialGradient
+from PySide6.QtWidgets import QWidget
 
 from karcytics.ui.theme import Colors, Fonts, get_tamil_font_family, theme_manager
 

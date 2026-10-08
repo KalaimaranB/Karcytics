@@ -1,5 +1,5 @@
 # karcytics/ui/workflows_tab.py
-from PyQt6.QtWidgets import QLineEdit, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLineEdit, QScrollArea, QVBoxLayout, QWidget
 
 from karcytics.ui.components.cards import DetailedWorkflowCard as WorkflowCard
 from karcytics.ui.theme import theme_manager

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -23,16 +23,16 @@ from karcytics.ui.widgets.dna_loader import ProgrammaticLoader
 class WorkspaceDashboard(QWidget):
     """Welcome / dashboard screen."""
 
-    module_selected = pyqtSignal(dict)  # Passes manifest
-    workflow_selected = pyqtSignal(str, str)  # Passes (module_id, filename)
-    workflow_settings_requested = pyqtSignal(str, str)  # Passes (module_id, filename)
-    open_academy_for_module_requested = pyqtSignal(str)  # Passes module_id
+    module_selected = Signal(object)  # Passes manifest
+    workflow_selected = Signal(str, str)  # Passes (module_id, filename)
+    workflow_settings_requested = Signal(str, str)  # Passes (module_id, filename)
+    open_academy_for_module_requested = Signal(str)  # Passes module_id
 
-    return_to_hub_requested = pyqtSignal()
-    open_store_requested = pyqtSignal()
-    open_ai_requested = pyqtSignal()
-    open_academy_requested = pyqtSignal()
-    trust_module_requested = pyqtSignal(str)  # Passes module_id
+    return_to_hub_requested = Signal()
+    open_store_requested = Signal()
+    open_ai_requested = Signal()
+    open_academy_requested = Signal()
+    trust_module_requested = Signal(str)  # Passes module_id
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)

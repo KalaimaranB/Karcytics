@@ -38,14 +38,23 @@ def test_plugin_installer_worker(mock_resolve, tmp_path: Path):
     mock_resolve.assert_called_once()
 
 
+def _record_finished(worker) -> list[tuple[bool, str]]:
+    """Collect `finished` emissions through a real slot.
+
+    PySide6 resolves a signal on the instance, so mocking it on the class
+    never intercepts emit().
+    """
+    emitted: list[tuple[bool, str]] = []
+    worker.finished.connect(lambda ok, message: emitted.append((ok, message)))
+    return emitted
+
+
 def test_worker_manifest_missing(tmp_path):
     """Verify worker handles missing manifest.json."""
-    with patch.object(PluginDependencyInstallerWorker, "finished") as mock_finished:
-        worker = PluginDependencyInstallerWorker(tmp_path)
-        worker.run()
-        mock_finished.emit.assert_called_with(
-            False, "pyproject.toml missing from plugin directory."
-        )
+    worker = PluginDependencyInstallerWorker(tmp_path)
+    emitted = _record_finished(worker)
+    worker.run()
+    assert emitted == [(False, "pyproject.toml missing from plugin directory.")]
 
 
 def test_worker_no_deps(tmp_path):
@@ -56,10 +65,10 @@ def test_worker_no_deps(tmp_path):
         '[project]\nname = "test"\nversion = "1.0.0"\ndescription = "desc"\nauthors = [{name = "author"}]\n'
         '[tool.karcytics.plugin]\nid = "test"\nauthors = [{name = "author", role = "Developer"}]\n'
     )
-    with patch.object(PluginDependencyInstallerWorker, "finished") as mock_finished:
-        worker = PluginDependencyInstallerWorker(plugin_dir)
-        worker.run()
-        mock_finished.emit.assert_called_with(True, "")
+    worker = PluginDependencyInstallerWorker(plugin_dir)
+    emitted = _record_finished(worker)
+    worker.run()
+    assert emitted == [(True, "")]
 
 
 def test_worker_exception(tmp_path):
@@ -71,11 +80,11 @@ def test_worker_exception(tmp_path):
         '[tool.karcytics.plugin]\nid = "test"\nauthors = [{name = "author", role = "Developer"}]\n'
         '[tool.karcytics.plugin.python_dependencies]\na = "1"\n'
     )
-    with patch.object(PluginDependencyInstallerWorker, "finished") as mock_finished:
-        worker = PluginDependencyInstallerWorker(plugin_dir)
-        with patch.object(worker.pm, "resolve_and_install_all", side_effect=Exception("Crash")):
-            worker.run()
-            mock_finished.emit.assert_called_with(False, "Crash")
+    worker = PluginDependencyInstallerWorker(plugin_dir)
+    emitted = _record_finished(worker)
+    with patch.object(worker.pm, "resolve_and_install_all", side_effect=Exception("Crash")):
+        worker.run()
+    assert emitted == [(False, "Crash")]
 
 
 def test_resolve_bundled_uv_windows(monkeypatch, tmp_path):

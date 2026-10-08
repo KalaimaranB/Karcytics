@@ -13,7 +13,7 @@ from karcytics_sdk.plugin import (
     WizardPanel,
     WizardStep,
 )
-from PyQt6.QtWidgets import QLabel, QWidget
+from PySide6.QtWidgets import QLabel, QWidget
 
 # Tests for PluginState
 
@@ -211,7 +211,7 @@ class TestWizardStep:
         page = QWidget()
         scroll = step._scroll(page)
 
-        from PyQt6.QtWidgets import QScrollArea
+        from PySide6.QtWidgets import QScrollArea
 
         assert isinstance(scroll, QScrollArea)
 

@@ -58,12 +58,12 @@ class KarcyticsApp:
                 quit. `None` is accepted so tests/tools that build a
                 `KarcyticsApp` without a full boot sequence don't need one.
         """
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QApplication
 
         # CRITICAL: WebEngine initialization must happen BEFORE QApplication is created.
         with contextlib.suppress(ImportError):
-            import PyQt6.QtWebEngineWidgets  # noqa: F401
+            import PySide6.QtWebEngineWidgets  # noqa: F401
 
         # A PyInstaller-frozen build runs as a real .app bundle, so macOS
         # already reads CFBundleName/CFBundleIconFile from its Info.plist —
@@ -101,7 +101,7 @@ class KarcyticsApp:
         theme_manager._apply_global_stylesheet()
 
         # --- BRANDING: Set Global Application Icon ---
-        from PyQt6.QtGui import QIcon
+        from PySide6.QtGui import QIcon
 
         from karcytics.core.resource_manager import default_app_icon_path
 
@@ -132,11 +132,11 @@ class KarcyticsApp:
             logging.getLogger(__name__).warning(f"Failed to apply SDK styles: {e}")
 
     def run(self) -> None:
-        """Display the project hub and start the PyQt event loop."""
+        """Display the project hub and start the Qt event loop."""
         print("4. Showing Hub Window...")
         self.show_hub()
 
-        print("5. Starting PyQt Event Loop...")
+        print("5. Starting Qt Event Loop...")
         from karcytics.core.task_scheduler import task_scheduler
 
         self.app.aboutToQuit.connect(task_scheduler.shutdown)
@@ -309,8 +309,8 @@ def _run_smoke_test_in_process(module_manager, plugin_id: str, data_file: str | 
     """
     from typing import NoReturn
 
-    from PyQt6.QtCore import QTimer
-    from PyQt6.QtWidgets import QApplication, QMessageBox
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QApplication, QMessageBox
 
     logger = logging.getLogger("Karcytics.SmokeTest")
     app = QApplication.instance() or QApplication(sys.argv)
@@ -489,7 +489,7 @@ def _inject_and_await_isolated_workflow(
     """
     import time
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     logger.info(f"Injecting test data file via inject_workflow RPC: {data_file}")
     try:
@@ -556,10 +556,10 @@ def _run_smoke_test_isolated(module_manager, plugin_id: str, data_file: str | No
     build any window and exits immediately; see docs/internal/26.
     """
     from karcytics_sdk.plugin.daemon import PluginUIDaemon
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     logger = logging.getLogger("Karcytics.SmokeTest")
-    # Must keep this reference alive: with no Python-side owner, PyQt/SIP
+    # Must keep this reference alive: with no Python-side owner, PySide/Shiboken
     # destroys the underlying QApplication as soon as this statement
     # completes (refcount hits zero), so the very next QWidget construction
     # below aborts with "Must construct a QApplication before a QWidget."
@@ -635,8 +635,8 @@ def _run_smoke_test(argv: list[str]) -> int:
 
     if not args.plugin_id:
         # Bare boot check: no plugin requested, just prove the app starts.
-        from PyQt6.QtCore import QTimer
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QApplication
 
         app = QApplication.instance() or QApplication(argv)
         QTimer.singleShot(SMOKE_TEST_TICK_MS, app.quit)
@@ -727,7 +727,7 @@ def _on_error_event(error_data: Any) -> None:
     # CRITICAL: We cannot show a QDialog if QApplication hasn't been created.
     # If it's a fatal error, we'll let the global exception handler in main() catch it
     # and show a native message box there.
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     if not QApplication.instance():
         return
@@ -804,7 +804,7 @@ def _start_application(log_file: Path) -> None:
         # choice yet and this is a production build with a DSN configured.
         # The delay lets the main window appear first so the dialog
         # doesn't flash before the UI is ready.
-        from PyQt6.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         if crash_reporting.get_configured_dsn() and crash_reporting.is_consent_given() is None:
 
@@ -825,7 +825,7 @@ def _start_application(log_file: Path) -> None:
         print(error_msg)
         logging.critical(error_msg)
 
-        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from PySide6.QtWidgets import QApplication, QMessageBox
 
         # Ensure we have a QApplication instance to show the message box
         _app = QApplication.instance()

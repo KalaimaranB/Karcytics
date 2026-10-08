@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QFileDialog, QInputDialog, QLabel, QMessageBox, QVBoxLayout
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QLabel, QMessageBox, QVBoxLayout
 
 from karcytics.core.config import AppConfig
 

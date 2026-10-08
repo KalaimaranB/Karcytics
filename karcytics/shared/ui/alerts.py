@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMessageBox, QWidget  # noqa: D100
+from PySide6.QtWidgets import QMessageBox, QWidget  # noqa: D100
 
 
 def show_error(parent: QWidget | None, title: str, text: str) -> None:

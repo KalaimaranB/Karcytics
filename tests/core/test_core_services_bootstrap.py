@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from karcytics_sdk.host.core_services import CoreServicesClient
 from karcytics_sdk.plugin.daemon import PluginUIDaemon
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from karcytics.core.core_services_bootstrap import (
     _event_subscriptions,
@@ -717,7 +717,7 @@ def event_subscriber_worker_script(tmp_path):
     """
     script_path = tmp_path / "event_subscriber_worker.py"
     code = """
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel
 from karcytics_sdk.plugin.runtime_services import KarcyticsEvent, event_bus
 from karcytics_sdk.plugin.ui_daemon_runtime import run, send_event
 

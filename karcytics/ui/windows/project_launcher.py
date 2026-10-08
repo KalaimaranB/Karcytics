@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from karcytics_sdk.plugin import SecondaryButton
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QHBoxLayout,
@@ -69,7 +69,7 @@ class ProjectLauncherWindow(QMainWindow):
         self.setMinimumSize(800, 500)
 
         # Restore window geometry from preferences
-        from PyQt6.QtCore import QByteArray
+        from PySide6.QtCore import QByteArray
 
         from karcytics.core.preferences import core_preferences
 
@@ -269,7 +269,7 @@ class ProjectLauncherWindow(QMainWindow):
         self will never find widgets inside them.  This helper casts a wider
         net by also searching any open QDialog.
         """
-        from PyQt6.QtWidgets import QApplication, QDialog
+        from PySide6.QtWidgets import QApplication, QDialog
 
         from karcytics.core.tutorial_manager import global_tutorial_manager
 
@@ -364,7 +364,7 @@ class ProjectLauncherWindow(QMainWindow):
         for w in targets:
             global_pos = w.mapToGlobal(w.rect().topLeft())
             local_pos = self._hub_tutorial_overlay.mapFromGlobal(global_pos)
-            from PyQt6.QtCore import QRect
+            from PySide6.QtCore import QRect
 
             rects.append(QRect(local_pos, w.size()))
 
@@ -474,7 +474,7 @@ class ProjectLauncherWindow(QMainWindow):
         if not ok or not name.strip():
             return
 
-        from PyQt6.QtCore import QStandardPaths
+        from PySide6.QtCore import QStandardPaths
 
         docs_path = QStandardPaths.writableLocation(
             QStandardPaths.StandardLocation.DocumentsLocation
@@ -753,7 +753,7 @@ class ProjectLauncherWindow(QMainWindow):
 
     def clear_app_data(self) -> None:
         """Clear all Karcytics app data and quit asynchronously to avoid UI freezing."""
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         # Return immediately if already clearing data
         if getattr(self, "_is_clearing_data", False):
@@ -836,7 +836,7 @@ class ProjectLauncherWindow(QMainWindow):
                 overlay.repaint()
                 app = QApplication.instance()
                 if app:
-                    from PyQt6.QtCore import QEventLoop
+                    from PySide6.QtCore import QEventLoop
 
                     app.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
@@ -859,8 +859,8 @@ class ModuleLoaderWorker(QThread):
     """Dynamically loads a module and injects workflow data without freezing the Hub."""
 
     # Emits the fully instantiated panel widget back to the main thread
-    finished = pyqtSignal(object)
-    error = pyqtSignal(str)
+    finished = Signal(object)
+    error = Signal(str)
 
     def __init__(self, module_id, workflow_data=None):
         super().__init__()
@@ -881,7 +881,7 @@ class ModuleLoaderWorker(QThread):
             panel_class = mod.CytoMetricsPanel  # Adjust to your dynamic loading logic
 
             # We can't actually instantiate QWidgets in a background thread without
-            # making PyQt angry, so we just import the heavy libraries and
+            # making Qt angry, so we just import the heavy libraries and
             # pass the Class reference back to the main thread to be built instantly.
 
             self.finished.emit((panel_class, self.workflow_data))
@@ -910,7 +910,7 @@ class _UpdateCheckWorker(QThread):
 class _CleanupWorker(QThread):
     """Background worker to delete the ~/.karcytics folder."""
 
-    error = pyqtSignal(str)
+    error = Signal(str)
 
     def run(self) -> None:
         import shutil

@@ -1,7 +1,7 @@
 """Analysis toolbars."""
 
 from karcytics_sdk.plugin import SecondaryButton
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 

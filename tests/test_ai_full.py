@@ -1,5 +1,5 @@
 from karcytics_sdk.host import AIAssistant, AIServerManager
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from karcytics.ui.components.ai_panel import AIChatWindow
 
@@ -116,12 +116,12 @@ def test_ai_chat_window_send_logic(qtbot, monkeypatch):
     window.show()
 
     # Mock the thread so it doesn't actually run
-    from PyQt6.QtCore import QObject, pyqtSignal
+    from PySide6.QtCore import QObject, Signal
 
     class MockThread(QObject):
-        chunk_received = pyqtSignal(str)
-        finished = pyqtSignal(dict)
-        error = pyqtSignal(str)
+        chunk_received = Signal(str)
+        finished = Signal(object)
+        error = Signal(str)
 
         def start(self):
             pass

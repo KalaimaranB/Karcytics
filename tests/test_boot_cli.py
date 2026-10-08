@@ -24,12 +24,12 @@ class _MockModuleManager:
 
 def test_smoke_test_timeout_no_signal(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify that the in-process smoke test returns failure when data_ready signal never emits."""
-    from PyQt6.QtCore import pyqtSignal
-    from PyQt6.QtWidgets import QApplication, QWidget
+    from PySide6.QtCore import Signal
+    from PySide6.QtWidgets import QApplication, QWidget
 
     # Mock panel class that has data_ready but never emits it
     class MockPanel(QWidget):
-        data_ready = pyqtSignal()
+        data_ready = Signal()
 
         def __init__(self) -> None:
             super().__init__()
@@ -58,15 +58,15 @@ def test_smoke_test_timeout_no_signal(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_smoke_test_panel_ready_without_data_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify that the in-process smoke test succeeds when panel_ready emits but data_ready is absent."""
-    from PyQt6.QtCore import QTimer, pyqtSignal
-    from PyQt6.QtWidgets import QApplication, QWidget
+    from PySide6.QtCore import QTimer, Signal
+    from PySide6.QtWidgets import QApplication, QWidget
 
     # Track load_workflow invocations
     load_workflow_calls: list[Any] = []
 
     # Mock panel class that has panel_ready but NOT data_ready
     class MockPanel(QWidget):
-        panel_ready = pyqtSignal()
+        panel_ready = Signal()
 
         def __init__(self) -> None:
             super().__init__()
@@ -100,12 +100,12 @@ def test_smoke_test_panel_ready_without_data_ready(monkeypatch: pytest.MonkeyPat
 
 def test_smoke_test_panel_ready_load_workflow_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify failure when load_workflow raises on a panel lacking data_ready."""
-    from PyQt6.QtCore import QTimer, pyqtSignal
-    from PyQt6.QtWidgets import QApplication, QWidget
+    from PySide6.QtCore import QTimer, Signal
+    from PySide6.QtWidgets import QApplication, QWidget
 
     # Mock panel class that has panel_ready but NOT data_ready, and load_workflow raises
     class MockPanel(QWidget):
-        panel_ready = pyqtSignal()
+        panel_ready = Signal()
 
         def __init__(self) -> None:
             super().__init__()

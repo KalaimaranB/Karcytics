@@ -10,13 +10,13 @@ PluginUIDaemon subprocess — this is purely a test of the wiring, mirroring
 test_loader_theme_sync.py's approach for the same reason.
 """
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from karcytics.core.plugins.loader import PluginLoaderFactory
 
 
 class _FakeDaemon(QObject):
-    event_received = pyqtSignal(str, object)
+    event_received = Signal(str, object)
 
 
 def test_wire_diagnostics_forwarding_forwards_matching_topic(qapp, monkeypatch):  # noqa: ARG001

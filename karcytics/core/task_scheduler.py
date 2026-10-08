@@ -10,7 +10,7 @@ from functools import partial
 from typing import Any
 
 from karcytics_sdk.plugin import AnalysisBase, AnalysisRunnable, AnalysisWorker, PluginState
-from PyQt6.QtCore import QObject, QThreadPool, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, QThreadPool, Signal, Slot
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,10 @@ class TaskScheduler(QObject):
     """
 
     # Lifecycle signals for global monitoring and debugging
-    task_started = pyqtSignal(str)  # task_id
-    task_finished = pyqtSignal(str, dict)  # task_id, results
-    task_error = pyqtSignal(str, str)  # task_id, error_message
-    task_progress = pyqtSignal(str, int)  # task_id, progress (0-100)
+    task_started = Signal(str)  # task_id
+    task_finished = Signal(str, object)  # task_id, results
+    task_error = Signal(str, str)  # task_id, error_message
+    task_progress = Signal(str, int)  # task_id, progress (0-100)
 
     def __init__(self) -> None:
         """Initialize the scheduler with the global thread pool and active-worker tracking."""
@@ -95,13 +95,13 @@ class TaskScheduler(QObject):
         self.pool.waitForDone(2000)
         self._active_workers.clear()
 
-    @pyqtSlot(str, dict)
+    @Slot(str, object)
     def _on_task_finished(self, task_id: str, results: dict) -> Any:
         """Handle successful task completion by emitting results and releasing workers."""
         self.task_finished.emit(task_id, results)
         self._cleanup(task_id)
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def _on_task_error(self, task_id: str, error_msg: str) -> Any:
         """Emit a task error signal and release the associated worker reference.
 
@@ -141,9 +141,9 @@ class TaskScheduler(QObject):
             # downstream slots (like deleteLater and local UI callbacks) from executing.
             worker = self._active_workers[task_id]
             try:
-                import sip  # type: ignore[import-not-found, import-untyped]
+                import shiboken6
 
-                if not sip.isdeleted(worker):
+                if shiboken6.isValid(worker):
                     worker.setParent(None)
             except (ImportError, AttributeError, RuntimeError):
                 pass
@@ -154,7 +154,7 @@ class TaskScheduler(QObject):
 class TaskSchedulerProxy:
     """Lazy proxy wrapper to defer C++ QObject creation until first access.
 
-    Prevents PyQt6 crashes on Windows when imported before a QCoreApplication
+    Prevents PySide6 crashes on Windows when imported before a QCoreApplication
     instance is fully initialized.
     """
 

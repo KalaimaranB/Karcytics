@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from karcytics.core.event_bus import EventManager, KarcyticsEvent
 
@@ -23,7 +23,7 @@ class TestEventBus:
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "test_plugin")
 
         # We need to process events because dispatch happens via internal signal
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
@@ -37,7 +37,7 @@ class TestEventBus:
         bus.subscribe(KarcyticsEvent.PLUGIN_INSTALLED, cb2)
 
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "shared_msg")
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
@@ -51,7 +51,7 @@ class TestEventBus:
         bus.unsubscribe(KarcyticsEvent.PLUGIN_INSTALLED, callback)
 
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "gone")
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
@@ -93,7 +93,7 @@ class TestEventBus:
         # Should not crash the emitter
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "data")
 
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 

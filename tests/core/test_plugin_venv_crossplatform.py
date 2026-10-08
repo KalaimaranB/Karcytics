@@ -167,39 +167,39 @@ class TestVenvPathResolution:
         return dist_info
 
     def test_installed_names_excludes_pinned_singleton_packages(self, tmp_path: Path) -> None:
-        """Regression test for a real production incident: PyQt6 is a transitive
+        """Regression test for a real production incident: PySide6 is a transitive
         dependency of karcytics_sdk, so it's installed in every plugin's own
         site-packages too. `_installed_names()` must never surface it as a purge
         candidate — the running process must keep exactly one Qt binding, ever.
-        Purging and reloading PyQt6 mid-session produced a QFont type mismatch
+        Purging and reloading PySide6 mid-session produced a QFont type mismatch
         (`setFont(): argument 1 has unexpected type 'QFont'`) that then triggered
         an infinite reporting loop (see test_diagnostics.py).
         """
         site_packages = tmp_path / "site-packages"
         site_packages.mkdir()
-        self._write_fake_dist_info(site_packages, "PyQt6", "6.11.0")
+        self._write_fake_dist_info(site_packages, "PySide6", "6.11.0")
         self._write_fake_dist_info(site_packages, "requests", "2.32.0")
 
         names = PluginEnvironmentInjector._installed_names(site_packages)
 
-        assert "PyQt6" not in names
+        assert "PySide6" not in names
         assert "requests" in names
 
     def test_enforce_priority_never_purges_pyqt6(self, tmp_path: Path) -> None:
         site_packages = tmp_path / "site-packages"
         site_packages.mkdir()
-        self._write_fake_dist_info(site_packages, "PyQt6", "6.11.0")
+        self._write_fake_dist_info(site_packages, "PySide6", "6.11.0")
 
-        # PyQt6 is genuinely already loaded in this test process (pytest-qt),
+        # PySide6 is genuinely already loaded in this test process (pytest-qt),
         # and its real location is certainly not our fake tmp_path — exactly the
         # "shadowed" condition enforce_priority looks for.
-        assert "PyQt6" in sys.modules
-        live_module = sys.modules["PyQt6"]
+        assert "PySide6" in sys.modules
+        live_module = sys.modules["PySide6"]
 
         purged = PluginEnvironmentInjector.enforce_priority(tmp_path, site_packages)
 
-        assert "PyQt6" not in purged
-        assert sys.modules["PyQt6"] is live_module
+        assert "PySide6" not in purged
+        assert sys.modules["PySide6"] is live_module
 
 
 class TestPurgeOwnedAndRemovePluginPaths:
@@ -212,10 +212,10 @@ class TestPurgeOwnedAndRemovePluginPaths:
     def test_purge_owned_excludes_pinned_singletons(self) -> None:
         sys.modules.setdefault("_fake_owned_dep", ModuleType("_fake_owned_dep"))
         try:
-            purged = PluginEnvironmentInjector.purge_owned({"PyQt6", "_fake_owned_dep"})
-            assert "PyQt6" not in purged
+            purged = PluginEnvironmentInjector.purge_owned({"PySide6", "_fake_owned_dep"})
+            assert "PySide6" not in purged
             assert "_fake_owned_dep" in purged
-            assert "PyQt6" in sys.modules
+            assert "PySide6" in sys.modules
             assert "_fake_owned_dep" not in sys.modules
         finally:
             sys.modules.pop("_fake_owned_dep", None)

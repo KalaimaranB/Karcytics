@@ -2,8 +2,8 @@ import logging
 from datetime import datetime
 
 from karcytics_sdk.plugin import DangerButton, PrimaryButton, SecondaryButton
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
     QFrame,
@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 class WorkflowPropertiesDialog(QDialog):
     """Dialog showing workflow file metadata, tags, and deletion options."""
 
-    workflow_deleted = pyqtSignal()
-    attachment_deleted = pyqtSignal()
-    workflow_updated = pyqtSignal()
+    workflow_deleted = Signal()
+    attachment_deleted = Signal()
+    workflow_updated = Signal()
 
     def __init__(self, project_manager, module_id: str, filename: str, parent=None):
         super().__init__(parent)

@@ -180,7 +180,7 @@ class PluginEnvironmentInjector:
         Parameters:
             site_packages (Path): The plugin's own site-packages directory.
 
-        Excludes packages in `_PINNED_SINGLETON_PACKAGES` (e.g. PyQt6) — these are
+        Excludes packages in `_PINNED_SINGLETON_PACKAGES` (e.g. PySide6) — these are
         never candidates for purging/re-resolution regardless of where they're
         installed, since the running process must keep exactly one copy of them.
 

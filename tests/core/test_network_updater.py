@@ -60,7 +60,7 @@ def _dict_to_toml(d):
     return "\n".join(lines)
 
 
-# Mock PyQt6 to avoid QThread errors during testing if needed
+# Mock PySide6 to avoid QThread errors during testing if needed
 class MockQThread:
     def __init__(self, *args, **kwargs):
         pass
@@ -75,7 +75,7 @@ class MockQThread:
 
 @pytest.fixture(autouse=True)
 def mock_qthread(monkeypatch):
-    monkeypatch.setattr("PyQt6.QtCore.QThread", MockQThread)
+    monkeypatch.setattr("PySide6.QtCore.QThread", MockQThread)
 
 
 @pytest.fixture
@@ -476,12 +476,14 @@ class TestNetworkUpdaterExpanded:
         """Verify exception handling in the PluginInstallerWorker thread."""
         from karcytics.ui.workers.plugin_installer import PluginInstallerWorker
 
-        # Patch the signal on the class before instantiation
-        with patch.object(PluginInstallerWorker, "finished") as mock_finished:
-            worker = PluginInstallerWorker("test", "url", tmp_path)
-            with patch(
-                "karcytics.ui.workers.plugin_installer.NetworkClient.get",
-                side_effect=Exception("Crash"),
-            ):
-                worker.run()
-                mock_finished.emit.assert_called_with(False, "Installation error: Crash")
+        # A real slot rather than a mocked signal: PySide6 resolves a signal on
+        # the instance, so a class-level mock is never the object emit() hits.
+        worker = PluginInstallerWorker("test", "url", tmp_path)
+        emitted: list[tuple[bool, str]] = []
+        worker.finished.connect(lambda ok, message: emitted.append((ok, message)))
+        with patch(
+            "karcytics.ui.workers.plugin_installer.NetworkClient.get",
+            side_effect=Exception("Crash"),
+        ):
+            worker.run()
+        assert emitted == [(False, "Installation error: Crash")]

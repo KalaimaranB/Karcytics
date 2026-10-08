@@ -1,9 +1,9 @@
 from pathlib import Path
 
 from karcytics_sdk.plugin import PrimaryButton, SecondaryButton
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QDesktopServices
+from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -206,7 +206,7 @@ class PluginDoctorDialog(QDialog):
         # 1. Re-download if Phase 1 failed
         phase1_failed = any(r.status == CheckStatus.FAIL for r in self.doctor.results["phase1"])
         if phase1_failed:
-            from PyQt6.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
 
             QApplication.processEvents()
             # We don't have mod_data in full format here, but updater can fetch it

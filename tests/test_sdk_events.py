@@ -1,5 +1,5 @@
 from karcytics_sdk.plugin import CentralEventBus
-from PyQt6.QtCore import QCoreApplication, QObject
+from PySide6.QtCore import QCoreApplication, QObject
 
 
 class MockSubscriber(QObject):

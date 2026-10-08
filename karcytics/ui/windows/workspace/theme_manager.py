@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 from karcytics.ui.theme import Colors, theme_manager
 
@@ -159,8 +159,8 @@ class ThemeManager:
     def _pump_events() -> None:
         """Processes pending Qt events so the UI stays responsive and the
         loading overlay's animation actually advances during long rebuilds."""
-        from PyQt6.QtCore import QEventLoop
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtCore import QEventLoop
+        from PySide6.QtWidgets import QApplication
 
         app = QApplication.instance()
         if app:

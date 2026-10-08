@@ -3,8 +3,8 @@
 import logging
 from collections.abc import Callable
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtWidgets import QWidget
 
 from karcytics.core.event_bus import KarcyticsEvent, event_bus
 
@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 class PluginUIWorker(QObject):
     """Worker to handle the slow import of plugin modules off the main thread."""
 
-    finished = pyqtSignal(object)
-    error = pyqtSignal(str)
+    finished = Signal(object)
+    error = Signal(str)
 
     def __init__(self, module_manager, module_id, parent=None):
         super().__init__(parent)
         self.module_manager = module_manager
         self.module_id = module_id
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         """
         Load the module UI class and emit either the result or a formatted error traceback.
@@ -38,9 +38,19 @@ class PluginUIWorker(QObject):
             self.error.emit(traceback.format_exc())
 
 
-class PluginLoaderManager:
+class PluginLoaderManager(QObject):
+    """Drives loading, showing, and unloading a module in a `WorkspaceWindow`.
+
+    A QObject so its methods can be connected as slots that run on the GUI
+    thread: PySide6 runs a slot that is *not* a bound QObject method (a
+    lambda, a partial, a plain function) on the sender's thread, and
+    `PluginUIWorker` lives on a background thread.
+    """
+
     def __init__(self, main_window):
+        super().__init__()
         self.main_window = main_window
+        self._loading_manifest: dict | None = None
 
     def open_module(self, manifest: dict) -> None:
         """
@@ -172,7 +182,7 @@ class PluginLoaderManager:
 
         # Safety net: don't let a widget that never emits `destroyed` (e.g. a
         # broken plugin overriding deleteLater) hang the switch forever.
-        from PyQt6.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         self._unload_safety = QTimer(mw)
         self._unload_safety.setSingleShot(True)
@@ -193,17 +203,28 @@ class PluginLoaderManager:
         mw._module_worker = PluginUIWorker(mw.module_manager, module_id)
         mw._module_worker.moveToThread(mw._module_thread)
 
+        # Bound methods, not lambdas: the worker emits from its own thread, and
+        # only a bound QObject method is delivered back on the GUI thread.
+        self._loading_manifest = manifest
         mw._module_thread.started.connect(mw._module_worker.run)
-        mw._module_worker.finished.connect(
-            lambda PanelClass: self.on_module_loaded(manifest, PanelClass)  # noqa: N803
-        )
-        mw._module_worker.error.connect(lambda err: self.on_module_load_error(module_id, err))
+        mw._module_worker.finished.connect(self._on_worker_finished)
+        mw._module_worker.error.connect(self._on_worker_error)
 
         # Cleanup when done
         mw._module_worker.finished.connect(mw._module_thread.quit)
         mw._module_worker.error.connect(mw._module_thread.quit)
 
         mw._module_thread.start()
+
+    def _on_worker_finished(self, PanelClass: Callable[[], QWidget]) -> None:  # noqa: N803
+        manifest, self._loading_manifest = self._loading_manifest, None
+        if manifest is not None:
+            self.on_module_loaded(manifest, PanelClass)
+
+    def _on_worker_error(self, error_msg: str) -> None:
+        manifest, self._loading_manifest = self._loading_manifest, None
+        if manifest is not None:
+            self.on_module_load_error(manifest["id"], error_msg)
 
     def on_module_loaded(self, manifest: dict, PanelClass: Callable[[], QWidget]) -> None:  # noqa: N803
         """
@@ -289,7 +310,7 @@ class PluginLoaderManager:
             if hasattr(panel, "data_ready"):
                 panel.data_ready.connect(self._on_data_ready)
 
-                from PyQt6.QtCore import QTimer
+                from PySide6.QtCore import QTimer
 
                 self._data_ready_safety = QTimer(mw)
                 self._data_ready_safety.setSingleShot(True)
@@ -623,7 +644,7 @@ class PluginLoaderManager:
             if hasattr(loader, "fade_out"):
                 loader.fade_out(700)
             else:
-                from PyQt6.QtCore import QTimer
+                from PySide6.QtCore import QTimer
 
                 QTimer.singleShot(700, on_fade_done)
 

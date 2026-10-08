@@ -1,7 +1,7 @@
 """Reusable UI Cards for Karcytics."""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
@@ -9,9 +9,9 @@ from karcytics.ui.theme import Colors, Fonts, theme_manager
 class ModuleCard(QFrame):
     """Clickable card representing one analysis module."""
 
-    clicked = pyqtSignal()
-    trust_requested = pyqtSignal()
-    trust_visual_requested = pyqtSignal()
+    clicked = Signal()
+    trust_requested = Signal()
+    trust_visual_requested = Signal()
 
     def __init__(
         self,
@@ -210,9 +210,9 @@ class DashboardWorkflowCard(QFrame):
     from the card's main ``clicked`` signal).
     """
 
-    clicked = pyqtSignal()
-    settings_requested = pyqtSignal()
-    academy_requested = pyqtSignal()
+    clicked = Signal()
+    settings_requested = Signal()
+    academy_requested = Signal()
 
     def __init__(
         self,

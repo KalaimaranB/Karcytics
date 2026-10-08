@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 
 class TestKarcyticsUI(unittest.TestCase):

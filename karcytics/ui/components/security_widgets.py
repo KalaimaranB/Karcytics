@@ -1,4 +1,4 @@
-"""PyQt6 Security & Trust UI Widgets for Karcytics.
+"""PySide6 Security & Trust UI Widgets for Karcytics.
 
 Implements the presentation layer (Phase 5) including:
 1. ConsensusTrustWidget: Tree presentation of co-signers, RBAC permissions, and trust paths.
@@ -16,9 +16,9 @@ from karcytics_sdk.host.marketplace_cache import (
     SandboxCacheService,
 )
 from karcytics_sdk.host.trust_manager import TrustManager
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QFont, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QPixmap
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -168,7 +168,7 @@ class ConsensusTrustWidget(QFrame):
 class TrustDirectoryWidget(QFrame):
     """Manual trust anchors registry manager allowing searching, revoking, and manually trusting developers."""
 
-    registry_changed = pyqtSignal()
+    registry_changed = Signal()
 
     def __init__(self, trust_manager: TrustManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)

@@ -1,7 +1,7 @@
 """Karcytics Event Bus (The Nervous System).
 
 Provides a global, thread-safe EventManager for decoupled communication
-between core components and UI. Built on PyQt6 signals.
+between core components and UI. Built on PySide6 signals.
 """
 
 import logging
@@ -9,7 +9,7 @@ from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any, TypedDict
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class EventManager(QObject):
     """
 
     # Internal signal used to route all events through the Qt event loop
-    _internal_bus = pyqtSignal(KarcyticsEvent, tuple, dict)
+    _internal_bus = Signal(KarcyticsEvent, tuple, object)
 
     def __init__(self) -> None:
         """Initialize the event manager and connect its internal event bus to dispatch events."""
@@ -104,7 +104,9 @@ class EventManager(QObject):
             self._listeners[event_type].remove(callback)
             logger.debug(f"Unsubscribed from {event_type.name}: {callback}")
 
-    def emit(self, event_type: KarcyticsEvent, *args: Any, **kwargs: Any) -> None:
+    # PySide6's QObject carries a legacy string-based emit(); this bus's own
+    # emit() intentionally replaces it.
+    def emit(self, event_type: KarcyticsEvent, *args: Any, **kwargs: Any) -> None:  # type: ignore[override]
         """Broadcast an event to all subscribers.
 
         Safe to call from any thread. Payloads are automatically routed

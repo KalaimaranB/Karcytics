@@ -140,7 +140,7 @@ class TestTaskScheduler:
 
         mock_worker = MagicMock()
         scheduler._active_workers["ghost"] = mock_worker
-        # Mock disconnect to raise a common PyQt runtime error
+        # Mock disconnect to raise a common Qt runtime error
         mock_worker.finished.disconnect.side_effect = RuntimeError("Signal not connected")
 
         scheduler._cleanup("ghost")

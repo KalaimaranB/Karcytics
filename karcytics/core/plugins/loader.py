@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from karcytics_sdk.plugin import KarcyticsPlugin
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 
 @dataclass
@@ -327,7 +327,7 @@ class PluginLoaderFactory:
             # hub_theme_manager is a long-lived singleton — without this,
             # closing the module would leave it holding a connection to a
             # Python wrapper around a deleted C++ QWidget, which
-            # push_theme()'s own sip.isdeleted() guard tolerates but which
+            # push_theme()'s own shiboken6.isValid() guard tolerates but which
             # would otherwise leak. Both exceptions below are the same class
             # of "already gone" race workspace_window.py's own theme_changed
             # disconnect already guards against: TypeError if this
