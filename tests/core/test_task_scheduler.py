@@ -134,6 +134,30 @@ class TestTaskScheduler:
             scheduler._on_task_error("tid", "Internal Failure")
             mock_diag.assert_called()
 
+    def test_lambda_connected_to_worker_finished_is_delivered(self, qtbot, scheduler):
+        """PySide6 delivers a non-bound-method slot through the sender, so a
+        scheduler that destroyed the worker during cleanup silently dropped
+        any lambda a caller had connected to `worker.finished`.
+        """
+        import threading
+
+        from karcytics_sdk.plugin.managed_task import FunctionalTask
+
+        connected = threading.Event()  # hold the task until the slot is connected
+
+        def work():
+            connected.wait(5)
+            return {"result": 8}
+
+        received = []
+        worker = scheduler.submit(FunctionalTask(work, "test"), None)
+        worker.finished.connect(lambda results: received.append(results))
+        del worker  # callers such as RenderPipelineController keep no reference
+        connected.set()
+
+        qtbot.waitUntil(lambda: bool(received), timeout=5000)
+        assert received[0]["result"] == 8
+
     def test_cleanup_signal_disconnect_resilience(self, scheduler):
         """Verify that cleanup handles workers already partially deleted or disconnected."""
         from unittest.mock import MagicMock
