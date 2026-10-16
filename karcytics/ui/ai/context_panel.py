@@ -1,6 +1,6 @@
 from karcytics_sdk.host.ai import AIAssistant
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QCheckBox, QLabel, QLineEdit, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit, QScrollArea, QVBoxLayout, QWidget
 
 from karcytics.ui.theme import Colors, theme_manager
 
@@ -8,7 +8,7 @@ from karcytics.ui.theme import Colors, theme_manager
 class ContextPanel(QWidget):
     """Integrated sidebar for managing AI context."""
 
-    selection_changed = pyqtSignal(list)
+    selection_changed = Signal(list)
 
     def __init__(self, parent, assistant: AIAssistant):
         super().__init__(parent)

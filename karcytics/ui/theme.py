@@ -4,7 +4,8 @@ import logging
 import weakref
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from karcytics_sdk.plugin import move_to_gui_thread
+from PySide6.QtCore import QObject, Signal
 
 from karcytics.core.config import AppConfig
 from karcytics.core.utils import AtomicJsonFile
@@ -69,7 +70,7 @@ class _Fonts:
         Returns:
                 QFont: A bold font using the heading family and extra-large size.
         """
-        from PyQt6.QtGui import QFont
+        from PySide6.QtGui import QFont
 
         f = QFont(self.FAMILY_HEADINGS, self.SIZE_XLARGE, QFont.Weight.Bold)
         return f  # noqa: RET504
@@ -82,7 +83,7 @@ class _Fonts:
         Returns:
                 QFont: A bold font configured for large headings.
         """
-        from PyQt6.QtGui import QFont
+        from PySide6.QtGui import QFont
 
         f = QFont(self.FAMILY_HEADINGS, self.SIZE_LARGE, QFont.Weight.Bold)
         return f  # noqa: RET504
@@ -94,7 +95,7 @@ class _Fonts:
         Returns:
             QFont: A bold heading font at the normal size.
         """
-        from PyQt6.QtGui import QFont
+        from PySide6.QtGui import QFont
 
         f = QFont(self.FAMILY_HEADINGS, self.SIZE_NORMAL, QFont.Weight.Bold)
         return f  # noqa: RET504
@@ -107,7 +108,7 @@ class _Fonts:
         Returns:
                 QFont: A font configured for body text.
         """
-        from PyQt6.QtGui import QFont
+        from PySide6.QtGui import QFont
 
         f = QFont(self.FAMILY_UI, self.SIZE_NORMAL)
         return f  # noqa: RET504
@@ -115,7 +116,7 @@ class _Fonts:
     @property
     def CAPTION(self):  # noqa: N802
         """Create a font for caption text using the standard UI family and small size."""
-        from PyQt6.QtGui import QFont
+        from PySide6.QtGui import QFont
 
         f = QFont(self.FAMILY_UI, self.SIZE_SMALL)
         return f  # noqa: RET504
@@ -137,7 +138,7 @@ def get_tamil_font_family() -> str:
     """
     global _tamil_font_family
     if _tamil_font_family is None:
-        from PyQt6.QtGui import QFontDatabase
+        from PySide6.QtGui import QFontDatabase
 
         from karcytics.core.resource_manager import resource_path
 
@@ -164,7 +165,7 @@ class ThemeManager(QObject):
     """Pub/Sub Engine for dynamic theme switching."""
 
     # This signal will broadcast to the whole app when colors change
-    theme_changed = pyqtSignal()
+    theme_changed = Signal()
 
     def __init__(self):
         super().__init__()
@@ -322,7 +323,7 @@ class ThemeManager(QObject):
         """Compiles the master base.qss template using the current Colors
         and applies it natively to the global QApplication instance.
         """
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         app = QApplication.instance()
         if not app:
@@ -373,3 +374,5 @@ class ThemeManager(QObject):
 
 # Global singleton instance so the whole app shares one engine
 theme_manager = ThemeManager()
+# Built at import time, which can happen on the async plugin loader's thread.
+move_to_gui_thread(theme_manager)

@@ -4,9 +4,9 @@ import logging
 import typing
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QShowEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QShowEvent
+from PySide6.QtWidgets import (
     QButtonGroup,
     QDialog,
     QHBoxLayout,
@@ -95,7 +95,7 @@ class ThemeSettingsWidget(QWidget):
         theme_manager.theme_changed.connect(self._apply_styles)
 
     def _apply_styles(self) -> None:
-        from PyQt6.QtWidgets import QLabel, QRadioButton
+        from PySide6.QtWidgets import QLabel, QRadioButton
 
         for label in self.findChildren(QLabel):
             if label.objectName() == "secondaryText":
@@ -159,7 +159,7 @@ class AboutSettingsWidget(QWidget):
         theme_manager.theme_changed.connect(self._apply_styles)
 
     def _apply_styles(self) -> None:
-        from PyQt6.QtWidgets import QLabel
+        from PySide6.QtWidgets import QLabel
 
         for label in self.findChildren(QLabel):
             theme_manager.apply_style(label, f"color: {Colors.FG_PRIMARY};")
@@ -220,7 +220,7 @@ class AdvancedSettingsWidget(QWidget):
         theme_manager.theme_changed.connect(self._apply_styles)
 
     def _apply_styles(self) -> None:
-        from PyQt6.QtWidgets import QLabel, QPushButton
+        from PySide6.QtWidgets import QLabel, QPushButton
 
         for label in self.findChildren(QLabel):
             theme_manager.apply_style(label, f"color: {Colors.FG_PRIMARY};")
@@ -241,7 +241,7 @@ class AdvancedSettingsWidget(QWidget):
         dialog.exec()
 
     def _clear_data(self) -> None:
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         reply = QMessageBox.question(
             self,
@@ -267,7 +267,7 @@ class AdvancedSettingsWidget(QWidget):
         import sys
         from pathlib import Path
 
-        from PyQt6.QtWidgets import QApplication, QInputDialog, QLineEdit, QMessageBox
+        from PySide6.QtWidgets import QApplication, QInputDialog, QLineEdit, QMessageBox
 
         reply = QMessageBox.question(
             self,

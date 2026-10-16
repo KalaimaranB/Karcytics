@@ -1,13 +1,13 @@
 from karcytics_sdk.host.ai import AIAssistant
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 
 class StreamingAIThread(QThread):
     """Worker thread for streaming AI responses."""
 
-    chunk_received = pyqtSignal(str)
-    finished = pyqtSignal(dict)
-    error = pyqtSignal(str)
+    chunk_received = Signal(str)
+    finished = Signal(object)
+    error = Signal(str)
 
     def __init__(
         self,

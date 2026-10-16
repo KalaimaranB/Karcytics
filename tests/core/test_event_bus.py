@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from karcytics.core.event_bus import EventManager, KarcyticsEvent
 
@@ -23,7 +23,7 @@ class TestEventBus:
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "test_plugin")
 
         # We need to process events because dispatch happens via internal signal
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
@@ -37,7 +37,7 @@ class TestEventBus:
         bus.subscribe(KarcyticsEvent.PLUGIN_INSTALLED, cb2)
 
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "shared_msg")
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
@@ -51,7 +51,7 @@ class TestEventBus:
         bus.unsubscribe(KarcyticsEvent.PLUGIN_INSTALLED, callback)
 
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "gone")
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
@@ -93,8 +93,25 @@ class TestEventBus:
         # Should not crash the emitter
         bus.emit(KarcyticsEvent.PLUGIN_INSTALLED, "data")
 
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.processEvents()
 
         cb_healthy.assert_called_once()
+
+
+def test_event_bus_first_built_off_the_gui_thread_lives_on_the_gui_thread(qapp, monkeypatch):
+    """The async plugin loader can be the first to touch the bus. A bus owned
+    by that short-lived thread would dispatch every event there, or not at all.
+    """
+    import threading
+
+    from karcytics.core import event_bus as event_bus_module
+
+    monkeypatch.setattr(event_bus_module, "_event_bus_instance", None)
+    built = []
+    thread = threading.Thread(target=lambda: built.append(event_bus_module.get_event_bus()))
+    thread.start()
+    thread.join()
+
+    assert built[0].thread() is qapp.thread()

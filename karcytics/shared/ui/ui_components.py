@@ -7,8 +7,8 @@ warnings.warn(
     stacklevel=2,
 )
 
-from PyQt6.QtCore import Qt  # noqa: E402
-from PyQt6.QtWidgets import QFrame, QLabel, QPushButton  # noqa: E402
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton  # noqa: E402
 
 
 class PrimaryButton(QPushButton):

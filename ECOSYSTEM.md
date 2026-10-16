@@ -45,4 +45,4 @@ A plugin never imports `karcytics.*` (the Hub) — only `karcytics_sdk` — rega
 - Dependency management: `uv`; every plugin resolves `karcytics-sdk` via `[tool.uv.sources]` as an editable path to `../Karcytics-SDK` for local dev.
 - Pre-commit (local `repo: local` hooks, not the pre-commit.com hosted ones) runs ruff, mypy, pip-audit, license compliance, and the **unit** test suite only — never the full suite — plus plugin re-signing and security-ledger verification for the isolated/in-process plugin repos. Don't pre-run the full suite yourself before a commit; let the hook gate it.
 - A plugin's manifest (`[tool.karcytics.plugin]` in its `pyproject.toml`) is the single source of truth for its id, version, entry point, process model, and Ed25519 signing/delegation keys.
-- Each plugin repo mirrors the same internal split: `analysis/` (pure compute, no Qt, independently testable) vs. `ui/` (PyQt6, calls into `analysis/`). See `Karcytics-SDK/CLAUDE.md` for why.
+- Each plugin repo mirrors the same internal split: `analysis/` (pure compute, no Qt, independently testable) vs. `ui/` (PySide6, calls into `analysis/`). See `Karcytics-SDK/CLAUDE.md` for why.

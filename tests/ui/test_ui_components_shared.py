@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 from karcytics.ui.components.cards import DetailedWorkflowCard
 from karcytics.ui.components.overlays import BioLoadingOverlay

@@ -67,7 +67,7 @@ Tests are marked with markers to allow selective execution:
 - `@pytest.mark.unit` - Unit tests (fast, isolated)
 - `@pytest.mark.integration` - Integration tests (slower, test interactions)
 - `@pytest.mark.slow` - Slow running tests
-- `@pytest.mark.qt` - Tests requiring PyQt6
+- `@pytest.mark.qt` - Tests requiring PySide6
 
 ## Fixtures
 

@@ -4,10 +4,10 @@ from pathlib import Path
 
 import markdown
 from pygments.formatters import HtmlFormatter
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtWebEngineCore import QWebEnginePage
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtWebEngineCore import QWebEnginePage
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -144,7 +144,7 @@ class HelpCenterDialog(QDialog):
         # Optmization: Speed up WebEngine
         settings = self.viewer.settings()
         if settings:
-            from PyQt6.QtWebEngineCore import QWebEngineSettings
+            from PySide6.QtWebEngineCore import QWebEngineSettings
 
             settings.setAttribute(
                 QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True

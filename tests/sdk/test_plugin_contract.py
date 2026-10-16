@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from karcytics_sdk.host.trust_manager import TrustManager
 from karcytics_sdk.plugin import KarcyticsPlugin, PluginBase
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 from karcytics.core.module_manager import ModuleManager
 

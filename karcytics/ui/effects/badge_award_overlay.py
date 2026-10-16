@@ -2,9 +2,9 @@ import math
 import random
 
 from karcytics_sdk.plugin.cyto_character import CytoWidget
-from PyQt6.QtCore import QPropertyAnimation, QRect, Qt, QTimer, pyqtProperty, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QRadialGradient
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Property, QPropertyAnimation, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QRadialGradient
+from PySide6.QtWidgets import QWidget
 
 
 class Confetti:
@@ -37,7 +37,7 @@ class Confetti:
 class BadgeAwardOverlay(QWidget):
     """Full-screen animation modal for when a user earns an Academy Badge."""
 
-    animation_finished = pyqtSignal()
+    animation_finished = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -125,7 +125,7 @@ class BadgeAwardOverlay(QWidget):
         if self._bg_alpha > 100:
             self.finish_sequence()
 
-    @pyqtProperty(int)
+    @Property(int)
     def bg_alpha(self):
         return self._bg_alpha
 
@@ -134,7 +134,7 @@ class BadgeAwardOverlay(QWidget):
         self._bg_alpha = value
         self.update()
 
-    @pyqtProperty(float)
+    @Property(float)
     def badge_scale(self):
         return self._badge_scale
 
@@ -185,7 +185,7 @@ class BadgeAwardOverlay(QWidget):
 
             # Draw hexagon
             points = []
-            from PyQt6.QtCore import QPointF
+            from PySide6.QtCore import QPointF
 
             for i in range(6):
                 angle = i * math.pi / 3 - math.pi / 2

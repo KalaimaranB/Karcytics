@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QColor, QLinearGradient, QPainter
+from PySide6.QtWidgets import QWidget
 
 from karcytics.ui.theme import Colors
 

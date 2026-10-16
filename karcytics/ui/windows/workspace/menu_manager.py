@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PyQt6.QtGui import QAction
+from PySide6.QtGui import QAction
 
 from karcytics.ui.theme import theme_manager
 

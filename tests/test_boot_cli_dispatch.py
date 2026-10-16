@@ -219,7 +219,7 @@ def test_no_plugin_id_is_a_bare_boot_check(monkeypatch: pytest.MonkeyPatch) -> N
     assert exit_code == 0
     assert core_services_called is False
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance()
     if app:

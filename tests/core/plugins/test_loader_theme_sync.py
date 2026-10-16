@@ -9,8 +9,8 @@ SDK's own test suite doesn't and shouldn't know about, since
 ModuleStatusWidget itself has no idea the Hub's theme system exists.
 """
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QApplication, QWidget
 
 from karcytics.core.plugins.loader import PluginLoaderFactory
 from karcytics.ui.theme import Colors
@@ -19,7 +19,7 @@ from karcytics.ui.theme import theme_manager as hub_theme_manager
 
 class _FakeStatusWidget(QWidget):
     STATE_RUNNING = "running"
-    state_changed = pyqtSignal(str)
+    state_changed = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()

@@ -6,7 +6,7 @@ through a modern desktop interface.
 
 Modules:
     analysis: Headless image processing engine (usable without GUI).
-    ui: PyQt6 desktop interface components.
+    ui: PySide6 desktop interface components.
 """
 
 

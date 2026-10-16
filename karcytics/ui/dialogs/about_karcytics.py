@@ -1,8 +1,8 @@
 import platform
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -92,12 +92,13 @@ class AboutKarcyticsDialog(QDialog):
         diag_layout = QVBoxLayout(diag_frame)
         diag_layout.setContentsMargins(15, 15, 15, 15)
 
-        import PyQt6.QtCore as QtCore
+        import PySide6
+        import PySide6.QtCore as QtCore
 
         self.sys_info = (
             f"Karcytics: v{AppConfig.CORE_VERSION}\n"
             f"Python: {platform.python_version()}\n"
-            f"PyQt6: {QtCore.PYQT_VERSION_STR} (Qt {QtCore.qVersion()})\n"
+            f"PySide6: {PySide6.__version__} (Qt {QtCore.qVersion()})\n"
             f"OS: {platform.system()} {platform.release()} ({platform.machine()})"
         )
 

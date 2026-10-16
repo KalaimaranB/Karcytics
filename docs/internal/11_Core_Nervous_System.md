@@ -144,7 +144,7 @@ The event manager uses Qt’s signal system to queue work safely.
 
 ```python
 class EventManager(QObject):
-    _internal_bus = pyqtSignal(KarcyticsEvent, tuple, dict)
+    _internal_bus = Signal(KarcyticsEvent, tuple, object)
 
     def emit(self, event_type, *args, **kwargs):
         self._internal_bus.emit(event_type, args, kwargs)

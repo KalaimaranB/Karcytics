@@ -2,7 +2,7 @@ import os
 from typing import Any
 
 from karcytics_sdk.host.ai import AIAssistant, AIServerManager
-from PyQt6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication
 
 
 class MockAIAssistant(AIAssistant):

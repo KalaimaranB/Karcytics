@@ -39,7 +39,7 @@ except Exception as e:
 
 # 3. Strict Check: Verify QCoreApplication requirement constraints
 print("\n[Step 2] Verifying early instantiation constraint...")
-from PyQt6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication
 
 if QCoreApplication.instance() is None:
     print(" -> Confirmed: No active QApplication instance exists yet.")
@@ -52,7 +52,7 @@ if QCoreApplication.instance() is None:
 
 # 4. Strict Check: Initialize QApplication and test singleton resolution
 print("\n[Step 3] Initializing QApplication and resolving singleton...")
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # Initialize offscreen application (matches headless CI environment)
 app = QApplication.instance()
@@ -113,4 +113,4 @@ else:
     )
 
 print("\n=== WINDOWS PARITY & SINGLETON VERIFICATION PASSED ===")
-print("Your code is 100% architecturally compliant with Windows PyQt6. Safe to commit!")
+print("Your code is 100% architecturally compliant with Windows PySide6. Safe to commit!")

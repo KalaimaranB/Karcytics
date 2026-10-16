@@ -24,10 +24,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 dependencies = [
-    "karcytics-sdk>=2.4.0",
+    "karcytics-sdk>=3.0.0",
     "msgpack>=1.0.0",
-    "PyQt6>=6.6",
-    "PyQt6-WebEngine>=6.6",
+    "PySide6>=6.6",
     "numpy==1.26.4",
     "scipy==1.17.1",
     "scikit-image>=0.22",
@@ -124,7 +123,7 @@ namespace_packages = true
 
 [[tool.mypy.overrides]]
 module = [
-    "PyQt6.*",
+    "PySide6.*",
     "numpy.*",
     "scipy.*",
     "cv2.*",
@@ -146,7 +145,8 @@ module = [
     "requests.*",
     "requests",
     "sentry_sdk.*",
-    "sentry_sdk"
+    "sentry_sdk",
+    "shiboken6"
 ]
 ignore_missing_imports = true
 

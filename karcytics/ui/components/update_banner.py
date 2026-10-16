@@ -10,8 +10,8 @@ cleanly when the widget is destroyed (no dangling event bus references).
 import logging
 import webbrowser
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
 from karcytics.core.event_bus import KarcyticsEvent, get_event_bus
 from karcytics.ui.theme import Colors, theme_manager

@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PySide6.QtCore import QObject, Qt, Signal
 
 from karcytics.ui.components.ai_panel import AIChatWindow
 
@@ -34,9 +34,9 @@ def test_ai_chat_window_send_message(qtbot, monkeypatch):
 
     # Mock the thread so it doesn't actually run
     class MockThread(QObject):
-        chunk_received = pyqtSignal(str)
-        finished = pyqtSignal(dict)
-        error = pyqtSignal(str)
+        chunk_received = Signal(str)
+        finished = Signal(object)
+        error = Signal(str)
 
         def start(self):
             pass

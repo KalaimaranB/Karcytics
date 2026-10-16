@@ -2,9 +2,9 @@
 
 import math
 
-from PyQt6.QtCore import QRectF, Qt, QTimer
-from PyQt6.QtGui import QBrush, QColor, QPainter
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import QRectF, Qt, QTimer
+from PySide6.QtGui import QBrush, QColor, QPainter
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from karcytics.ui.theme import theme_manager
 
