@@ -9,6 +9,7 @@ from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any, TypedDict
 
+from karcytics_sdk.plugin import move_to_gui_thread
 from PySide6.QtCore import QObject, Signal
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,9 @@ def get_event_bus() -> EventManager:
     global _event_bus_instance
     if _event_bus_instance is None:
         _event_bus_instance = EventManager()
+        # `emit()` routes to the thread this bus lives on; if it were first
+        # built off the GUI thread, every event would be dispatched there.
+        move_to_gui_thread(_event_bus_instance)
     return _event_bus_instance
 
 

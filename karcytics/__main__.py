@@ -90,6 +90,17 @@ class KarcyticsApp:
 
             patch_macos_bundle_name("Karcytics", logging.getLogger(__name__))
 
+        # Windows' equivalent: without its own AppUserModelID the taskbar
+        # groups a dev launch under python.exe and shows Python's icon, not
+        # the one set via setWindowIcon below. Isolated plugins set their own
+        # ("Karcytics.Plugin.<id>") in `run_ui_daemon`.
+        if sys.platform == "win32":
+            import logging
+
+            from karcytics_sdk.plugin import set_windows_app_user_model_id
+
+            set_windows_app_user_model_id("Karcytics.Hub", logging.getLogger(__name__))
+
         print("1. Initializing QApplication...")
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
         self.app = QApplication(sys.argv)

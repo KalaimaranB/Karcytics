@@ -158,6 +158,27 @@ class TestTaskScheduler:
         qtbot.waitUntil(lambda: bool(received), timeout=5000)
         assert received[0]["result"] == 8
 
+    def test_task_finished_emitted_for_task_submitted_off_the_gui_thread(self, qtbot, scheduler):
+        """A worker created on a plain Python thread belonged to that thread,
+        so the scheduler's own finished slot was delivered through a thread
+        with no event loop and silently dropped.
+        """
+        import threading
+
+        from karcytics_sdk.plugin.managed_task import FunctionalTask
+
+        received = []
+        scheduler.task_finished.connect(lambda task_id, results: received.append(results))
+
+        submitter = threading.Thread(
+            target=lambda: scheduler.submit(FunctionalTask(lambda: {"result": 9}, "test"), None)
+        )
+        submitter.start()
+        submitter.join()
+
+        qtbot.waitUntil(lambda: bool(received), timeout=5000)
+        assert received[0]["result"] == 9
+
     def test_cleanup_signal_disconnect_resilience(self, scheduler):
         """Verify that cleanup handles workers already partially deleted or disconnected."""
         from unittest.mock import MagicMock

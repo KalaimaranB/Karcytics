@@ -9,7 +9,13 @@ import uuid
 from functools import partial
 from typing import Any
 
-from karcytics_sdk.plugin import AnalysisBase, AnalysisRunnable, AnalysisWorker, PluginState
+from karcytics_sdk.plugin import (
+    AnalysisBase,
+    AnalysisRunnable,
+    AnalysisWorker,
+    PluginState,
+    move_to_gui_thread,
+)
 from PySide6.QtCore import QMetaObject, QObject, Qt, QThreadPool, Signal, Slot
 
 logger = logging.getLogger(__name__)
@@ -55,8 +61,16 @@ class TaskScheduler(QObject):
         try:
             task_id = str(uuid.uuid4())
 
-            # 1. Create the worker (The QObject that does the work and talks to the UI)
-            worker = AnalysisWorker(analyzer, state, parent=self)
+            # 1. Create the worker (The QObject that does the work and talks to the UI).
+            # A caller may submit from a plain Python thread (e.g. a debounce
+            # `threading.Timer`); a worker created there belongs to that thread,
+            # and PySide6 delivers the non-QObject slots below through it — a
+            # thread with no event loop, so they were silently dropped. Move it
+            # to this scheduler's thread before parenting and wiring it.
+            worker = AnalysisWorker(analyzer, state)
+            if worker.thread() is not self.thread():
+                worker.moveToThread(self.thread())
+            worker.setParent(self)
             worker.task_id = task_id  # type: ignore[attr-defined]  # Attach ID for tracking
 
             # 2. Bridge worker signals to the global scheduler signals
@@ -178,7 +192,11 @@ class TaskSchedulerProxy:
             TaskScheduler: The shared task scheduler instance.
         """
         if self._instance is None:
+            # The first touch can come from a background thread (the async
+            # plugin loader); `submit()` moves each worker to this
+            # scheduler's thread, so that must be the GUI one.
             self._instance = TaskScheduler()
+            move_to_gui_thread(self._instance)
         return self._instance
 
     def __getattr__(self, name: str) -> Any:

@@ -4,6 +4,7 @@ import logging
 import weakref
 from pathlib import Path
 
+from karcytics_sdk.plugin import move_to_gui_thread
 from PySide6.QtCore import QObject, Signal
 
 from karcytics.core.config import AppConfig
@@ -373,3 +374,5 @@ class ThemeManager(QObject):
 
 # Global singleton instance so the whole app shares one engine
 theme_manager = ThemeManager()
+# Built at import time, which can happen on the async plugin loader's thread.
+move_to_gui_thread(theme_manager)

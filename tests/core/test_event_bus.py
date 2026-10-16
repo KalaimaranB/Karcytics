@@ -98,3 +98,20 @@ class TestEventBus:
         QApplication.processEvents()
 
         cb_healthy.assert_called_once()
+
+
+def test_event_bus_first_built_off_the_gui_thread_lives_on_the_gui_thread(qapp, monkeypatch):
+    """The async plugin loader can be the first to touch the bus. A bus owned
+    by that short-lived thread would dispatch every event there, or not at all.
+    """
+    import threading
+
+    from karcytics.core import event_bus as event_bus_module
+
+    monkeypatch.setattr(event_bus_module, "_event_bus_instance", None)
+    built = []
+    thread = threading.Thread(target=lambda: built.append(event_bus_module.get_event_bus()))
+    thread.start()
+    thread.join()
+
+    assert built[0].thread() is qapp.thread()
