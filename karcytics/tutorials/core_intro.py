@@ -78,11 +78,15 @@ _steps = [
         id="hub_open_preferences",
         text=(
             "First, let's get you set up. Open the **Preferences** dialog from the "
-            "menu bar (**Karcytics → Preferences**) so we can customize your workspace."
+            "menu bar (**Karcytics → Preferences**) so we can customize your workspace. "
+            "**Ctrl+,** (**⌘,** on a Mac) works too."
         ),
         cyto_emotion="pointing",
         event_name="PREFERENCES_OPENED",
-        allow_interaction=True,
+        # The menu bar can't be spotlit (on macOS it isn't even part of the
+        # window), but it sits outside the Hub overlay, so dimming and
+        # locking everything else leaves it as the one thing to click.
+        allow_interaction=False,
         next_step_id="hub_about_appearance",
     ),
     InteractionStep(

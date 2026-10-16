@@ -504,7 +504,10 @@ class WorkspaceWindow(QMainWindow):
             global_pos = w.mapToGlobal(w.rect().topLeft())
             local_pos = active_overlay.mapFromGlobal(global_pos)
             rects.append(QRect(local_pos, w.size()))
-        active_overlay.set_targets(rects)
+        from karcytics.ui.components.tutorial_companion import defer_to_companion
+
+        if not defer_to_companion(active_overlay):
+            active_overlay.set_targets(rects)
 
     def _setup_status_bar(self) -> None:
         self.status_bar = QStatusBar()

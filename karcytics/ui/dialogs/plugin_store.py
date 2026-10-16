@@ -1319,8 +1319,13 @@ class PluginStoreDialog(QDialog):
 
     def _view_plugin_details(self, plugin_id: str, data: dict):
         """Displays detailed V2 meta inspection dialog."""
+        from karcytics.ui.components.tutorial_companion import attach_tutorial_companion
+
         event_bus.emit(KarcyticsEvent.STORE_MODULE_DETAILS_OPENED)
         dialog = PluginDetailsDialog(plugin_id, data, self, self.module_manager)
+        # The tour's details step happens inside this dialog, above the
+        # store's own overlay — keep Cyto floating beside it.
+        attach_tutorial_companion(dialog, self._on_tutorial_skip)
         dialog.exec()
         event_bus.emit(KarcyticsEvent.STORE_MODULE_DETAILS_CLOSED)
 
