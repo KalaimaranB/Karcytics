@@ -145,7 +145,8 @@ module = [
     "requests.*",
     "requests",
     "sentry_sdk.*",
-    "sentry_sdk"
+    "sentry_sdk",
+    "shiboken6"
 ]
 ignore_missing_imports = true
 
