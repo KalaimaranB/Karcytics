@@ -333,6 +333,7 @@ class ProjectLauncherWindow(QMainWindow):
         from karcytics_sdk.plugin.tutorial_models import InteractionStep
 
         from karcytics.core.tutorial_manager import global_tutorial_manager
+        from karcytics.ui.components.tutorial_companion import defer_to_companion
 
         if not self._hub_tutorial_overlay.isVisible():
             return
@@ -368,6 +369,8 @@ class ProjectLauncherWindow(QMainWindow):
 
             rects.append(QRect(local_pos, w.size()))
 
+        if defer_to_companion(self._hub_tutorial_overlay):
+            return
         self._hub_tutorial_overlay.set_targets(rects)
         self._hub_tutorial_overlay.raise_()
 
@@ -712,6 +715,7 @@ class ProjectLauncherWindow(QMainWindow):
 
     def _open_preferences(self) -> None:
         """Open the unified preferences dialog."""
+        from karcytics.ui.components.tutorial_companion import attach_tutorial_companion
         from karcytics.ui.dialogs.preferences_dialog import PreferencesDialog
 
         dialog = PreferencesDialog(
@@ -719,6 +723,9 @@ class ProjectLauncherWindow(QMainWindow):
             hub_manager=self,
             workspace_window=None,
         )
+        # Onboarding steps 4-6 happen inside this dialog, above the Hub's own
+        # overlay — keep Cyto floating beside it instead of hidden behind it.
+        attach_tutorial_companion(dialog, self._on_hub_tutorial_skip)
         dialog.exec()
 
     def _open_help_center(self):
