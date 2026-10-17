@@ -91,6 +91,12 @@ class PluginLoaderManager(QObject):
 
         mw._switch_in_progress = True
 
+        # Expand to full screen for the analysis view — the workspace window
+        # is intentionally kept at its default/saved size on the Hub home
+        # screen, then maximized here so the module panel has as much
+        # real estate as possible once it appears.
+        mw.showMaximized()
+
         # An isolated module's real content is a separate OS window with its
         # own loading screen (see ui_daemon_runtime.run()'s GalacticLoader in
         # the SDK) — the Hub's own warp/hyperdrive cinematic has nothing

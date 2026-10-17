@@ -26,6 +26,12 @@ class HubManager:
 
         mw.current_module_id = None
 
+        # Restore the pre-module window size when returning to the Hub —
+        # the analysis view maximizes on entry (see plugin_loader.open_module);
+        # we undo that here so the Hub doesn't inherit the maximized state.
+        if mw.isMaximized():
+            mw.showNormal()
+
         # We assume `_transition_to_page` is kept on main_window for layout management
         mw._transition_to_page(0)  # _PAGE_HOME = 0
 
