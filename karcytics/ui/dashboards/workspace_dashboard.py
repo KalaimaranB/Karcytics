@@ -315,6 +315,7 @@ class WorkspaceDashboard(QWidget):
                 tags=tags,
                 has_academy=has_academy,
                 course_count=course_count,
+                academy=wf.get("academy"),
             )
 
             # THE LAMBDA FIX: We are now explicitly locking 't=title' into memory!

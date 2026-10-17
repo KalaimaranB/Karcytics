@@ -213,6 +213,9 @@ class HubManager:
                                 "timestamp": metadata.get("timestamp", "Unknown Date"),
                                 "description": metadata.get("description", ""),
                                 "tags": metadata.get("tags", []),
+                                # Set by a plugin running Academy courses in
+                                # this workflow (e.g. flow cytometry).
+                                "academy": metadata.get("academy"),
                             }
                         )
 
