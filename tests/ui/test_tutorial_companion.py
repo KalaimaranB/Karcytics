@@ -178,3 +178,81 @@ def test_window_overlay_defers_to_companion_then_comes_back(qtbot, host):
     assert defer_to_companion(overlay) is False
     assert overlay.cyto.isVisible()
     assert overlay.bubble_container.isVisible()
+
+
+@pytest.fixture
+def nested(qtbot):
+    """Project window -> Marketplace -> details panel, like tour step 16."""
+    main = QWidget()
+    main.resize(900, 700)
+    qtbot.addWidget(main)
+    store = QDialog(main)
+    store.resize(700, 500)
+    details = QDialog(store)
+    details.resize(400, 300)
+    main.show()
+    store.show()
+    return main, store, details
+
+
+def _shields(window: QWidget) -> list[QWidget]:
+    return [
+        w
+        for w in window.findChildren(QWidget, options=Qt.FindChildOption.FindDirectChildrenOnly)
+        if type(w).__name__ == "_DimShield"
+    ]
+
+
+@pytest.mark.usefixtures("tour")
+def test_windows_behind_the_dialog_are_dimmed_while_companion_shows(qtbot, nested):
+    main, store, details = nested
+    companion = attach_tutorial_companion(details, lambda: None)
+    assert companion is not None
+    details.show()
+    qtbot.waitUntil(companion.isVisible)
+
+    for window in (store, main):
+        (shield,) = _shields(window)
+        assert shield.isVisible()
+        assert shield.geometry() == window.rect()
+    assert not _shields(details)
+
+    details.hide()
+    qtbot.waitUntil(lambda: not _shields(store) and not _shields(main))
+
+
+@pytest.mark.usefixtures("tour")
+def test_dim_shield_follows_window_resize(qtbot, nested):
+    main, _store, details = nested
+    companion = attach_tutorial_companion(details, lambda: None)
+    assert companion is not None
+    details.show()
+    qtbot.waitUntil(companion.isVisible)
+
+    main.resize(1000, 800)
+    (shield,) = _shields(main)
+    assert shield.geometry() == main.rect()
+
+
+@pytest.mark.usefixtures("tour")
+def test_app_reactivation_puts_dialog_then_cyto_back_on_top(qtbot, monkeypatch, nested):
+    _main, _store, details = nested
+    companion = attach_tutorial_companion(details, lambda: None)
+    assert companion is not None
+    details.show()
+    qtbot.waitUntil(companion.isVisible)
+
+    order: list[str] = []
+    monkeypatch.setattr(details, "raise_", lambda: order.append("dialog"))
+    monkeypatch.setattr(companion, "raise_", lambda: order.append("cyto"))
+
+    companion._on_application_state_changed(Qt.ApplicationState.ApplicationInactive)
+    assert order == []
+    companion._on_application_state_changed(Qt.ApplicationState.ApplicationActive)
+    # Activating the dialog can raise Cyto once more on its own; what matters
+    # is that Cyto always ends up above the dialog.
+    assert order[0] == "dialog"
+    assert order[-1] == "cyto"
+    # Runs again once AppKit has finished its own re-ordering.
+    qtbot.waitUntil(lambda: order.count("dialog") == 2)
+    assert order[-1] == "cyto"

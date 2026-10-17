@@ -7,16 +7,27 @@ text vanish behind the dialog mid-step. `TutorialCompanion` is the same
 overlay class re-hosted as a frameless tool window parented to that dialog
 instead: the window manager keeps a tool window above its parent, it closes
 with it, and as a child of a modal dialog it is not input-blocked by it.
+While it shows, every window behind the dialog (the Hub, the Marketplace a
+details panel was opened from, ...) is dimmed so the dialog is the focus.
 """
 
 import weakref
 from collections.abc import Callable
 
+import shiboken6
 from karcytics_sdk.plugin.tutorial_models import BaseStep
 from karcytics_sdk.plugin.tutorial_overlay import TutorialOverlay
-from PySide6.QtCore import QEvent, QObject, QPoint, Qt
-from PySide6.QtGui import QPaintEvent, QRegion
-from PySide6.QtWidgets import QApplication, QDialog
+from PySide6.QtCore import QEvent, QObject, QPoint, Qt, QTimer
+from PySide6.QtGui import (
+    QColor,
+    QHideEvent,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QRegion,
+    QShowEvent,
+)
+from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
 from karcytics.core.tutorial_manager import global_tutorial_manager, hub_academy_event_bus
 
@@ -28,6 +39,42 @@ _BUBBLE_DROP = 30
 _MARGIN = 10
 # Gap between the dialog's frame and the companion beside it.
 _GAP = 12
+# Same dim TutorialOverlay paints around a spotlight.
+_DIM = QColor(0, 0, 0, 160)
+# AppKit re-orders windows on app reactivation after Qt has already seen the
+# activation, so the restack runs again once that has settled.
+_RESTACK_SETTLE_MS = 120
+
+
+class _DimShield(QWidget):
+    """Dims all of `window` and swallows clicks on it while a companion shows.
+
+    A modal dialog already blocks input to the windows behind it, but
+    nothing showed that — the Hub and the Marketplace stayed fully lit, so
+    they read as clickable during the step.
+    """
+
+    def __init__(self, window: QWidget) -> None:
+        super().__init__(window)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setGeometry(window.rect())
+        window.installEventFilter(self)
+        self.show()
+        self.raise_()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        if watched is self.parentWidget() and event.type() == QEvent.Type.Resize:
+            self.setGeometry(self.parentWidget().rect())
+            self.raise_()
+        return super().eventFilter(watched, event)
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802, ARG002
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), _DIM)
+        painter.end()
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        event.accept()
 
 
 class TutorialCompanion(TutorialOverlay):
@@ -43,6 +90,7 @@ class TutorialCompanion(TutorialOverlay):
         super().__init__(global_tutorial_manager, hub_academy_event_bus, host, compact_mode=True)
         self._host = host
         self._made_room = False
+        self._shields: list[_DimShield] = []
         self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
@@ -50,6 +98,9 @@ class TutorialCompanion(TutorialOverlay):
         self.skip_requested.connect(on_skip)
         self.skip_requested.connect(self.hide)
         host.installEventFilter(self)
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.applicationStateChanged.connect(self._on_application_state_changed)
         TutorialCompanion._live.add(self)
 
     @classmethod
@@ -80,7 +131,55 @@ class TutorialCompanion(TutorialOverlay):
                     self._place_beside_host()
             elif kind in (QEvent.Type.Hide, QEvent.Type.Close):
                 self.hide()
+            elif kind == QEvent.Type.WindowActivate and self.isVisible():
+                self.raise_()
         return super().eventFilter(watched, event)
+
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
+        super().showEvent(event)
+        if not self._shields:
+            self._shields = [_DimShield(window) for window in self._windows_behind_host()]
+
+    def hideEvent(self, event: QHideEvent) -> None:  # noqa: N802
+        super().hideEvent(event)
+        # A spontaneous hide is the OS ordering the tool window out while
+        # the app is inactive — the step is still live, keep the dim.
+        if event.spontaneous():
+            return
+        for shield in self._shields:
+            if shiboken6.isValid(shield):
+                shield.deleteLater()
+        self._shields = []
+
+    def _windows_behind_host(self) -> list[QWidget]:
+        """Every distinct window the dialog was opened from, nearest first."""
+        windows: list[QWidget] = []
+        parent = self._host.parentWidget()
+        while parent is not None:
+            window = parent.window()
+            if window not in windows:
+                windows.append(window)
+            parent = window.parentWidget()
+        return windows
+
+    # ── Stacking ──────────────────────────────────────────────────────────────
+
+    def _on_application_state_changed(self, state: Qt.ApplicationState) -> None:
+        # Switching apps and back lets macOS re-order the app's windows —
+        # with nested modal dialogs (Marketplace -> details) it was seen to
+        # bring the Marketplace back above the details panel, taking Cyto's
+        # dialog out of view. Put the dialog, then Cyto, back on top.
+        if state != Qt.ApplicationState.ApplicationActive:
+            return
+        self._restack()
+        QTimer.singleShot(_RESTACK_SETTLE_MS, self._restack)
+
+    def _restack(self) -> None:
+        if not self._is_alive() or not self.isVisible() or not self._host.isVisible():
+            return
+        self._host.raise_()
+        self._host.activateWindow()
+        self.raise_()
 
     def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802, ARG002
         """Nothing to paint — Cyto and the bubble draw themselves."""
