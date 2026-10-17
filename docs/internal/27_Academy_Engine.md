@@ -141,7 +141,7 @@ Courses run for about 60 steps, so a learner can pause one and come back later. 
 **Flow cytometry plugin:**
 * A course always runs inside an *Academy workflow*. The workflow's metadata keeps an `academy` block with the state, course, place and finished courses. The same workflow carries the learner through all five courses.
 * Pausing saves the workflow and locks it until the learner resumes, so the workspace stays exactly as the next step expects.
-* Closing the window mid-course pauses and saves first.
+* Closing the window mid-course asks whether to save the place; it never saves without asking.
 * After each course the learner chooses: start the next course, or **Leave Academy**, which turns the workflow back into an ordinary one and keeps the work.
 * Resuming lands on the latest visited step whose spotlight targets are all on screen.
 
