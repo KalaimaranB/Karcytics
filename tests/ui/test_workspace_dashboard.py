@@ -105,6 +105,32 @@ class TestWorkspaceDashboard:
 
         assert signal_received == ["set.json"]
 
+    def test_workflow_rename_signal(self, dashboard):
+        """Verifies that rename_requested on a card propagates as workflow_rename_requested."""
+        workflows = [{"filename": "ren.json", "module_id": "m", "name": "Renameable"}]
+        dashboard.populate_workflows(workflows)
+
+        received = []
+        dashboard.workflow_rename_requested.connect(lambda mid, fn: received.append((mid, fn)))
+
+        cards = dashboard.findChildren(DashboardWorkflowCard)
+        cards[0].rename_requested.emit()
+
+        assert received == [("m", "ren.json")]
+
+    def test_workflow_duplicate_signal(self, dashboard):
+        """Verifies that duplicate_requested on a card propagates as workflow_duplicate_requested."""
+        workflows = [{"filename": "dup.json", "module_id": "mod_b", "name": "Duplicateable"}]
+        dashboard.populate_workflows(workflows)
+
+        received = []
+        dashboard.workflow_duplicate_requested.connect(lambda mid, fn: received.append((mid, fn)))
+
+        cards = dashboard.findChildren(DashboardWorkflowCard)
+        cards[0].duplicate_requested.emit()
+
+        assert received == [("mod_b", "dup.json")]
+
     def test_academy_workflow_shows_its_course_status(self, dashboard):
         academy = {
             "state": "paused",

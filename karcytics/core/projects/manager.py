@@ -321,6 +321,31 @@ class ProjectManager:
         """
         return self.workflows.delete(filename)
 
+    def rename_workflow(self, filename: str, new_name: str) -> bool:
+        """Update the display name stored in a workflow's metadata block.
+
+        The file on disk is not renamed; only ``metadata.name`` is updated.
+
+        Args:
+            filename: The workflow JSON filename (basename only).
+            new_name: The new human-readable display name.
+
+        Returns:
+            ``True`` if the update was written successfully, ``False`` otherwise.
+        """
+        return self.workflows.rename(filename, new_name)
+
+    def duplicate_workflow(self, filename: str) -> str | None:
+        """Deep-copy a workflow (and its attachments) under a new filename.
+
+        Args:
+            filename: The workflow JSON filename (basename only) to duplicate.
+
+        Returns:
+            The new workflow's filename (basename), or ``None`` on failure.
+        """
+        return self.workflows.duplicate(filename)
+
     def delete_workflow_attachment(self, filename: str, key: str) -> bool:
         """Delete an attachment from a saved workflow.
 

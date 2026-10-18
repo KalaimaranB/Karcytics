@@ -531,6 +531,10 @@ class WorkspaceWindow(QMainWindow):
         self.home_screen.workflow_settings_requested.connect(
             self.hub_manager.handle_workflow_settings
         )
+        self.home_screen.workflow_rename_requested.connect(self.hub_manager.handle_workflow_rename)
+        self.home_screen.workflow_duplicate_requested.connect(
+            self.hub_manager.handle_workflow_duplicate
+        )
         self.home_screen.trust_module_requested.connect(self.hub_manager.on_trust_requested)
         self.home_screen.open_academy_requested.connect(self.hub_manager.open_academy_from_home)
         self.home_screen.open_academy_for_module_requested.connect(

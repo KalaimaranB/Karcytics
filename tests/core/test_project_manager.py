@@ -355,3 +355,83 @@ class TestProjectManager:
         ):
             pm.save()
             mock_diag.assert_called()
+
+    def test_rename_workflow_updates_name(self, open_project):
+        """Verify rename_workflow changes metadata.name without altering the filename."""
+        pm = open_project
+        filename = pm.save_workflow("mod", {"p": 1}, {"name": "Original Name"})
+
+        result = pm.rename_workflow(filename, "Renamed")
+
+        assert result is True
+        # The disk filename is unchanged
+        assert (pm.project_dir / "workflows" / filename).exists()
+        # But the in-file display name is updated
+        from karcytics.core.utils import AtomicJsonFile
+
+        data = AtomicJsonFile.load(pm.project_dir / "workflows" / filename, default={})
+        assert data["metadata"]["name"] == "Renamed"
+
+    def test_rename_workflow_missing_returns_false(self, open_project):
+        """Verify rename_workflow returns False for a non-existent workflow."""
+        assert open_project.rename_workflow("ghost.json", "New Name") is False
+
+    def test_duplicate_workflow_creates_copy(self, open_project):
+        """Verify duplicate_workflow creates a new JSON file with '(Copy)' in its name."""
+        pm = open_project
+        filename = pm.save_workflow("mod", {"value": 42}, {"name": "Source"})
+
+        new_filename = pm.duplicate_workflow(filename)
+
+        assert new_filename is not None
+        assert new_filename != filename
+        assert (pm.project_dir / "workflows" / new_filename).exists()
+
+        from karcytics.core.utils import AtomicJsonFile
+
+        data = AtomicJsonFile.load(pm.project_dir / "workflows" / new_filename, default={})
+        assert data["metadata"]["name"] == "Source (Copy)"
+        # Payload must be identical
+        assert data["payload"] == {"value": 42}
+
+    def test_duplicate_workflow_missing_returns_none(self, open_project):
+        """Verify duplicate_workflow returns None for a non-existent workflow."""
+        assert open_project.duplicate_workflow("ghost.json") is None
+
+    def test_duplicate_workflow_collision_avoidance(self, open_project):
+        """Verify that duplicating twice produces two distinct filenames."""
+        pm = open_project
+        filename = pm.save_workflow("mod", {}, {"name": "Base"})
+
+        first = pm.duplicate_workflow(filename)
+        second = pm.duplicate_workflow(filename)
+
+        assert first is not None
+        assert second is not None
+        assert first != second
+        # Both files must exist
+        assert (pm.project_dir / "workflows" / first).exists()
+        assert (pm.project_dir / "workflows" / second).exists()
+
+    def test_duplicate_workflow_copies_attachments(self, open_project, tmp_path):
+        """Verify that duplicate_workflow copies the attachments folder and rewrites paths."""
+        pm = open_project
+
+        # Create a workflow with an attachment
+        filename = pm.save_workflow("mod", {"p": 1}, {"name": "With Att"})
+        src_file = tmp_path / "data.txt"
+        src_file.write_text("hello")
+        pm.attach_workflow_file(filename, src_file, key="raw_data")
+
+        new_filename = pm.duplicate_workflow(filename)
+
+        assert new_filename is not None
+        new_stem = new_filename.replace(".json", "")
+        att_dir = pm.project_dir / "workflows" / f"{new_stem}_attachments"
+        assert att_dir.exists()
+
+        from karcytics.core.utils import AtomicJsonFile
+
+        data = AtomicJsonFile.load(pm.project_dir / "workflows" / new_filename, default={})
+        for att in data.get("attachments", []):
+            assert new_stem in att["relative_path"]
