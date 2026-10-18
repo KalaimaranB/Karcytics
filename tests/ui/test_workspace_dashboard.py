@@ -105,6 +105,35 @@ class TestWorkspaceDashboard:
 
         assert signal_received == ["set.json"]
 
+    def test_academy_workflow_shows_its_course_status(self, dashboard):
+        academy = {
+            "state": "paused",
+            "course_id": "flow_course_2_compensation",
+            "course_title": "Building a matrix",
+            "course_number": 2,
+            "course_count": 5,
+            "step_number": 23,
+            "step_total": 60,
+        }
+        dashboard.populate_workflows(
+            [
+                {
+                    "filename": "a.json",
+                    "module_id": "flow_cytometry",
+                    "name": "Academy",
+                    "academy": academy,
+                },
+                {"filename": "b.json", "module_id": "flow_cytometry", "name": "Plain"},
+            ]
+        )
+
+        cards = {c.title_lbl.text(): c for c in dashboard.findChildren(DashboardWorkflowCard)}
+        status = cards["Academy"].academy_status_lbl
+        assert status is not None
+        assert status.text() == "🎓 Course 2 · Paused · 38%"
+        assert "Building a matrix" in status.toolTip()
+        assert cards["Plain"].academy_status_lbl is None
+
     def test_galactic_mode_text(self, dashboard):
         """Verifies overrides when Galactic theme is loaded."""
         from karcytics.ui.theme import Strings, theme_manager
@@ -127,3 +156,33 @@ class TestWorkspaceDashboard:
         Strings.GREETING = orig_greeting
         dashboard._update_dashboard_text()
         assert "Galactic" not in dashboard.lbl_tagline.text()
+
+
+@pytest.mark.parametrize(
+    ("academy", "label"),
+    [
+        (None, None),
+        (
+            {"state": "running", "course_number": 1, "step_number": 0, "step_total": 0},
+            "🎓 Course 1 · In progress",
+        ),
+        (
+            {"state": "paused", "course_number": 3, "step_number": 30, "step_total": 60},
+            "🎓 Course 3 · Paused · 50%",
+        ),
+        (
+            {"state": "between_courses", "completed_count": 2, "course_count": 5},
+            "🎓 2 of 5 courses done",
+        ),
+        (
+            {"state": "between_courses", "completed_courses": ["a"], "course_count": 5},
+            "🎓 1 of 5 courses done",
+        ),
+        ({"state": "graduated"}, "🎓 Academy · all courses done"),
+        ({"state": "something_new"}, "🎓 Academy"),
+    ],
+)
+def test_academy_workflow_label(academy, label):
+    from karcytics.ui.components.cards import academy_workflow_label
+
+    assert academy_workflow_label(academy) == label

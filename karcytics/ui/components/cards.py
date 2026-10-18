@@ -202,12 +202,42 @@ class ModuleCard(QFrame):
         super().mousePressEvent(event)
 
 
+def academy_workflow_label(academy: dict | None) -> str | None:
+    """The 🎓 pill text for an Academy workflow, from its metadata's ``academy`` block.
+
+    A plugin running Academy courses inside a workflow keeps that block in
+    the workflow's metadata (state, course number, progress), so the Hub
+    can show where the learner is without starting the plugin. None for an
+    ordinary workflow.
+    """
+    if not isinstance(academy, dict):
+        return None
+    state = academy.get("state")
+    number = academy.get("course_number")
+    count = academy.get("course_count")
+    if state in ("running", "paused"):
+        total = academy.get("step_total") or 0
+        percent = f" · {round(100 * (academy.get('step_number') or 0) / total)}%" if total else ""
+        status = "In progress" if state == "running" else "Paused"
+        return f"🎓 Course {number} · {status}{percent}" if number else f"🎓 Academy · {status}"
+    if state == "between_courses":
+        done = academy.get("completed_count") or len(academy.get("completed_courses") or [])
+        return f"🎓 {done} of {count} courses done" if count else "🎓 Academy"
+    if state == "graduated":
+        return "🎓 Academy · all courses done"
+    return "🎓 Academy"
+
+
 class DashboardWorkflowCard(QFrame):
     """Clickable card representing a saved workflow with a settings button.
 
     When ``has_academy=True`` the card shows a 🎓 pill badge and a subtle blue
     left-border accent.  Clicking the pill emits ``academy_requested`` (independent
     from the card's main ``clicked`` signal).
+
+    An Academy workflow (``academy`` is its metadata's ``academy`` block)
+    shows its course status instead — "🎓 Course 2 · Paused · 38%" — in
+    place of the course-count pill, with the same accent.
     """
 
     clicked = Signal()
@@ -223,10 +253,12 @@ class DashboardWorkflowCard(QFrame):
         tags: list[str] = None,
         has_academy: bool = False,
         course_count: int = 0,
+        academy: dict | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self._has_academy = has_academy
+        academy_label = academy_workflow_label(academy)
+        self._has_academy = has_academy or academy_label is not None
         self.setObjectName("workflowCard")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumSize(220, 130)
@@ -248,7 +280,22 @@ class DashboardWorkflowCard(QFrame):
 
         # Academy badge pill — shown only when courses are registered for this module
         self._academy_btn: QPushButton | None = None
-        if has_academy:
+        self.academy_status_lbl: QLabel | None = None
+        if academy_label is not None:
+            self.academy_status_lbl = QLabel(academy_label)
+            self.academy_status_lbl.setObjectName("workflowAcademyStatus")
+            course_title = academy.get("course_title") if isinstance(academy, dict) else None
+            self.academy_status_lbl.setToolTip(
+                f"Academy workflow — {course_title}" if course_title else "Academy workflow"
+            )
+            theme_manager.apply_style(
+                self.academy_status_lbl,
+                "background: rgba(31, 111, 235, 0.18); color: #79c0ff;"
+                " border: 1px solid #1f6feb; border-radius: 8px;"
+                " padding: 1px 7px; font-size: 10px; font-weight: bold;",
+            )
+            top_row.addWidget(self.academy_status_lbl)
+        elif has_academy:
             label = (
                 f"🎓 {course_count} course" if course_count == 1 else f"🎓 {course_count} courses"
             )

@@ -317,7 +317,8 @@ class PluginLoaderFactory:
         from karcytics.ui.theme import theme_manager as hub_theme_manager
 
         def _push_current_theme() -> None:
-            widget.push_theme(current_theme_colors())
+            # The name lets the module pick theme extras, e.g. Cyto's costume.
+            widget.push_theme(current_theme_colors(), hub_theme_manager.current_theme_name)
 
         def _on_state_changed(state: str) -> None:
             if state == widget.STATE_RUNNING:

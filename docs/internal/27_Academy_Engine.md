@@ -127,6 +127,30 @@ This makes courses easier to author and easier to progress safely across differe
 
 ---
 
+## Pausing and resuming: Academy workflows
+
+Courses run for about 60 steps, so a learner can pause one and come back later. The engine provides the pieces, and a plugin decides where the saved place lives.
+
+**Engine (SDK):**
+* `AcademyManager.pause()` stops the live course and returns a JSON snapshot: the course, the step, the visited steps, sub-task progress and "step N of M".
+* `restore_session(snapshot)` resumes from a snapshot. A step's `resume_step_id` sends the resume back to the step that opens a window or dialog that the saved workflow doesn't restore.
+* `progress.json` keeps the latest unfinished attempt per course, through `record_in_progress()`. The catalog uses it to show progress and offer **Resume Course**.
+* `AcademyLockCard` dims a panel, disables its widgets and the window's menu bar, and shows Cyto with two choices.
+* The overlay's ⏸ Pause button (`set_pausable(True)`) replaces the exit button.
+
+**Flow cytometry plugin:**
+* A course always runs inside an *Academy workflow*. The workflow's metadata keeps an `academy` block with the state, course, place and finished courses. The same workflow carries the learner through all five courses.
+* Pausing saves the workflow and locks it until the learner resumes, so the workspace stays exactly as the next step expects.
+* Closing the window mid-course asks whether to save the place; it never saves without asking.
+* After each course the learner chooses: start the next course, or **Leave Academy**, which turns the workflow back into an ordinary one and keeps the work.
+* Resuming lands on the latest visited step whose spotlight targets are all on screen.
+
+**Hub:** the Hub never runs a pausable course. It reads the `academy` block straight from the workflow file, without starting the plugin, and shows a 🎓 status pill on the dashboard's workflow card, e.g. "Course 2 · Paused · 38%" (`academy_workflow_label` in `cards.py`). Projects are not marked; only workflows are.
+
+The plugin's plan file, `Karcytics-flow-cytometry/docs/developer/plans/ACADEMY_PAUSE_RESUME_PLAN.md`, has the details.
+
+---
+
 ## Limitations and future work
 
 A course can wait on Hub-level events only if the event is explicitly bridged into the plugin process. That is possible, but it is not automatic. In other words, the Academy system is shared, but not every event from the Hub is automatically visible to every plugin.
