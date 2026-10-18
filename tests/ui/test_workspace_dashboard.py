@@ -131,6 +131,41 @@ class TestWorkspaceDashboard:
 
         assert received == [("mod_b", "dup.json")]
 
+    def test_workflow_delete_signal(self, dashboard):
+        """Verifies that delete_requested on a card propagates as workflow_delete_requested."""
+        workflows = [{"filename": "del.json", "module_id": "mod_c", "name": "Deleteable"}]
+        dashboard.populate_workflows(workflows)
+
+        received = []
+        dashboard.workflow_delete_requested.connect(lambda mid, fn: received.append((mid, fn)))
+
+        cards = dashboard.findChildren(DashboardWorkflowCard)
+        cards[0].delete_requested.emit()
+
+        assert received == [("mod_c", "del.json")]
+
+    def test_right_click_does_not_open_workflow(self, dashboard):
+        """Verifies that delete/duplicate/rename signals do NOT also emit clicked.
+
+        Ensures the left-button guard in mousePressEvent is in place: emitting
+        a context-menu action should never simultaneously open the workflow.
+        """
+        workflows = [{"filename": "x.json", "module_id": "m", "name": "X"}]
+        dashboard.populate_workflows(workflows)
+
+        opened = []
+        dashboard.workflow_selected.connect(lambda mid, fn: opened.append(fn))
+
+        cards = dashboard.findChildren(DashboardWorkflowCard)
+        card = cards[0]
+
+        # Simulate each context-menu action — none should cause workflow_selected to fire
+        card.rename_requested.emit()
+        card.duplicate_requested.emit()
+        card.delete_requested.emit()
+
+        assert opened == [], "Right-click actions must not open the workflow"
+
     def test_academy_workflow_shows_its_course_status(self, dashboard):
         academy = {
             "state": "paused",

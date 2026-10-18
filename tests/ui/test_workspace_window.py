@@ -194,3 +194,43 @@ class TestWorkspaceWindow:
         assert hasattr(window, "_anim_out")
         # Ensure the animation is targeting our fade effect
         assert window._anim_out.targetObject() is window._fade_effect
+
+    def test_handle_workflow_rename(self, window):
+        """Verify workflow rename calls project_manager and refreshes."""
+        window.project_manager.rename_workflow.return_value = True
+        with (
+            patch.object(window.hub_manager, "refresh_hub_workflows") as mock_refresh,
+            patch("PySide6.QtWidgets.QInputDialog.getText", return_value=("New Name", True)),
+        ):
+            window.hub_manager.handle_workflow_rename("mod", "wf.json")
+            window.project_manager.rename_workflow.assert_called_once_with("wf.json", "New Name")
+            mock_refresh.assert_called_once()
+
+    def test_handle_workflow_duplicate(self, window):
+        """Verify workflow duplicate calls project_manager and refreshes."""
+        window.project_manager.duplicate_workflow.return_value = "wf_copy.json"
+        with patch.object(window.hub_manager, "refresh_hub_workflows") as mock_refresh:
+            window.hub_manager.handle_workflow_duplicate("mod", "wf.json")
+            window.project_manager.duplicate_workflow.assert_called_once_with("wf.json")
+            mock_refresh.assert_called_once()
+
+    def test_handle_workflow_delete_confirmed(self, window):
+        """Verify workflow delete calls project_manager when user confirms."""
+        window.project_manager.delete_workflow.return_value = True
+        with (
+            patch.object(window.hub_manager, "refresh_hub_workflows") as mock_refresh,
+            patch("karcytics.ui.windows.workspace.hub_manager.ask_question", return_value=True),
+        ):
+            window.hub_manager.handle_workflow_delete("mod", "wf.json")
+            window.project_manager.delete_workflow.assert_called_once_with("mod", "wf.json")
+            mock_refresh.assert_called_once()
+
+    def test_handle_workflow_delete_cancelled(self, window):
+        """Verify workflow delete does nothing when user cancels."""
+        with (
+            patch.object(window.hub_manager, "refresh_hub_workflows") as mock_refresh,
+            patch("karcytics.ui.windows.workspace.hub_manager.ask_question", return_value=False),
+        ):
+            window.hub_manager.handle_workflow_delete("mod", "wf.json")
+            window.project_manager.delete_workflow.assert_not_called()
+            mock_refresh.assert_not_called()

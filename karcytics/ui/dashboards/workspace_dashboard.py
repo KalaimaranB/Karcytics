@@ -28,6 +28,7 @@ class WorkspaceDashboard(QWidget):
     workflow_settings_requested = Signal(str, str)  # Passes (module_id, filename)
     workflow_rename_requested = Signal(str, str)  # Passes (module_id, filename)
     workflow_duplicate_requested = Signal(str, str)  # Passes (module_id, filename)
+    workflow_delete_requested = Signal(str, str)  # Passes (module_id, filename)
     open_academy_for_module_requested = Signal(str)  # Passes module_id
 
     return_to_hub_requested = Signal()
@@ -336,6 +337,11 @@ class WorkspaceDashboard(QWidget):
             )
             card.duplicate_requested.connect(
                 lambda *args, mid=module_id, fn=filename: self.workflow_duplicate_requested.emit(  # noqa: ARG005
+                    mid, fn
+                )
+            )
+            card.delete_requested.connect(
+                lambda *args, mid=module_id, fn=filename: self.workflow_delete_requested.emit(  # noqa: ARG005
                     mid, fn
                 )
             )

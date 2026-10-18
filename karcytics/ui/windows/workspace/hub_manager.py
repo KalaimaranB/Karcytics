@@ -322,3 +322,23 @@ class HubManager:
             show_error(
                 mw, "Duplicate Failed", "Could not duplicate the workflow. Please try again."
             )
+
+    def handle_workflow_delete(self, module_id: str, filename: str) -> None:  # noqa: ARG002
+        """Ask for confirmation then permanently delete the workflow.
+
+        Parameters:
+            module_id: The module identifier (unused; reserved for future routing).
+            filename: The workflow JSON filename to delete.
+        """
+        mw = self.main_window
+        if ask_question(
+            mw,
+            "Delete Workflow",
+            "Are you sure you want to permanently delete this workflow and all its data?\n\n"
+            "This cannot be undone.",
+        ):
+            if mw.project_manager.delete_workflow(module_id, filename):
+                mw.status_bar.showMessage("Workflow deleted.", 4000)
+                self.refresh_hub_workflows()
+            else:
+                show_error(mw, "Delete Failed", "Could not delete the workflow. Please try again.")
