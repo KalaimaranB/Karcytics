@@ -1,7 +1,16 @@
 """Reusable UI Cards for Karcytics."""
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+)
 
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
@@ -243,6 +252,9 @@ class DashboardWorkflowCard(QFrame):
     clicked = Signal()
     settings_requested = Signal()
     academy_requested = Signal()
+    rename_requested = Signal()
+    duplicate_requested = Signal()
+    delete_requested = Signal()
 
     def __init__(
         self,
@@ -419,7 +431,15 @@ class DashboardWorkflowCard(QFrame):
         super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
-        """Handle card clicks while excluding clicks on overlay buttons."""
+        """Handle card clicks while excluding clicks on overlay buttons.
+
+        Only left-button presses emit ``clicked``; right-button presses are
+        left to ``contextMenuEvent`` so the context menu never also opens the
+        workflow.
+        """
+        if event.button() != Qt.MouseButton.LeftButton:
+            super().mousePressEvent(event)
+            return
         pos = event.position().toPoint()
         # Ignore clicks on overlay buttons — they handle their own signals
         if self.btn_settings.geometry().contains(pos):
@@ -430,6 +450,57 @@ class DashboardWorkflowCard(QFrame):
             return
         self.clicked.emit()
         super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event) -> None:  # noqa: N802
+        """Show a right-click context menu with Rename, Duplicate, and Delete actions.
+
+        Parameters:
+            event: The context-menu event carrying the global cursor position.
+        """
+        menu = QMenu(self)
+        theme_manager.apply_style(
+            menu,
+            f"""
+            QMenu {{
+                background: {Colors.BG_DARK};
+                border: 1px solid {Colors.BORDER};
+                border-radius: 6px;
+                padding: 4px 0px;
+                color: {Colors.FG_PRIMARY};
+                font-size: 13px;
+            }}
+            QMenu::item {{
+                padding: 6px 20px 6px 12px;
+                border-radius: 4px;
+                margin: 1px 4px;
+            }}
+            QMenu::item:selected {{
+                background: {Colors.BG_MEDIUM};
+                color: {Colors.FG_PRIMARY};
+            }}
+            QMenu::separator {{
+                height: 1px;
+                background: {Colors.BORDER};
+                margin: 3px 8px;
+            }}
+            """,
+        )
+
+        act_rename = QAction("✏️  Rename", self)
+        act_rename.triggered.connect(self.rename_requested.emit)
+        menu.addAction(act_rename)
+
+        act_duplicate = QAction("📋  Duplicate Workflow", self)
+        act_duplicate.triggered.connect(self.duplicate_requested.emit)
+        menu.addAction(act_duplicate)
+
+        menu.addSeparator()
+
+        act_delete = QAction("🗑️  Delete Workflow", self)
+        act_delete.triggered.connect(self.delete_requested.emit)
+        menu.addAction(act_delete)
+
+        menu.exec(event.globalPos())
 
 
 class DetailedWorkflowCard(QFrame):
