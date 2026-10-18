@@ -9,8 +9,14 @@ import uuid
 from functools import partial
 from typing import Any
 
-from karcytics_sdk.plugin import AnalysisBase, AnalysisRunnable, AnalysisWorker, PluginState
-from PyQt6.QtCore import QObject, QThreadPool, pyqtSignal, pyqtSlot
+from karcytics_sdk.plugin import (
+    AnalysisBase,
+    AnalysisRunnable,
+    AnalysisWorker,
+    PluginState,
+    move_to_gui_thread,
+)
+from PySide6.QtCore import QMetaObject, QObject, Qt, QThreadPool, Signal, Slot
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +30,10 @@ class TaskScheduler(QObject):
     """
 
     # Lifecycle signals for global monitoring and debugging
-    task_started = pyqtSignal(str)  # task_id
-    task_finished = pyqtSignal(str, dict)  # task_id, results
-    task_error = pyqtSignal(str, str)  # task_id, error_message
-    task_progress = pyqtSignal(str, int)  # task_id, progress (0-100)
+    task_started = Signal(str)  # task_id
+    task_finished = Signal(str, object)  # task_id, results
+    task_error = Signal(str, str)  # task_id, error_message
+    task_progress = Signal(str, int)  # task_id, progress (0-100)
 
     def __init__(self) -> None:
         """Initialize the scheduler with the global thread pool and active-worker tracking."""
@@ -38,6 +44,7 @@ class TaskScheduler(QObject):
         # Retain references to active workers to prevent Python's GC
         # from reclaiming them while the C++ thread is still running.
         self._active_workers: dict[str, AnalysisWorker] = {}
+        self._retired_workers: list[AnalysisWorker] = []
 
         logger.info(f"TaskScheduler initialized. Thread pool limit: {self.pool.maxThreadCount()}")
 
@@ -54,8 +61,16 @@ class TaskScheduler(QObject):
         try:
             task_id = str(uuid.uuid4())
 
-            # 1. Create the worker (The QObject that does the work and talks to the UI)
-            worker = AnalysisWorker(analyzer, state, parent=self)
+            # 1. Create the worker (The QObject that does the work and talks to the UI).
+            # A caller may submit from a plain Python thread (e.g. a debounce
+            # `threading.Timer`); a worker created there belongs to that thread,
+            # and PySide6 delivers the non-QObject slots below through it — a
+            # thread with no event loop, so they were silently dropped. Move it
+            # to this scheduler's thread before parenting and wiring it.
+            worker = AnalysisWorker(analyzer, state)
+            if worker.thread() is not self.thread():
+                worker.moveToThread(self.thread())
+            worker.setParent(self)
             worker.task_id = task_id  # type: ignore[attr-defined]  # Attach ID for tracking
 
             # 2. Bridge worker signals to the global scheduler signals
@@ -95,13 +110,13 @@ class TaskScheduler(QObject):
         self.pool.waitForDone(2000)
         self._active_workers.clear()
 
-    @pyqtSlot(str, dict)
+    @Slot(str, object)
     def _on_task_finished(self, task_id: str, results: dict) -> Any:
         """Handle successful task completion by emitting results and releasing workers."""
         self.task_finished.emit(task_id, results)
         self._cleanup(task_id)
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def _on_task_error(self, task_id: str, error_msg: str) -> Any:
         """Emit a task error signal and release the associated worker reference.
 
@@ -134,27 +149,35 @@ class TaskScheduler(QObject):
         Parameters:
             task_id (str): Identifier of the task whose worker reference should be released.
         """
-        if task_id in self._active_workers:
-            # We explicitly do NOT call worker.finished.disconnect() here because
-            # this method is called *during* the finished signal emission.
-            # Disconnecting it would instantly clear the connection list, preventing
-            # downstream slots (like deleteLater and local UI callbacks) from executing.
-            worker = self._active_workers[task_id]
-            try:
-                import sip  # type: ignore[import-not-found, import-untyped]
+        # This runs *during* the worker's finished/error emission. Under
+        # PySide6 a slot that is not a bound QObject method (the lambdas
+        # callers such as the render pipeline connect to `worker.finished`)
+        # is delivered through the sender, so letting the worker be destroyed
+        # here silently drops every such slot still queued behind this one.
+        # Detach it as before, but hold a reference until `_release_retired`
+        # runs — a queued call, so it lands after those pending slots.
+        worker = self._active_workers.pop(task_id, None)
+        if worker is None:
+            return
+        try:
+            import shiboken6
 
-                if not sip.isdeleted(worker):
-                    worker.setParent(None)
-            except (ImportError, AttributeError, RuntimeError):
-                pass
-            finally:
-                del self._active_workers[task_id]
+            if shiboken6.isValid(worker):
+                worker.setParent(None)
+        except (ImportError, AttributeError, RuntimeError):
+            pass
+        self._retired_workers.append(worker)
+        QMetaObject.invokeMethod(self, "_release_retired", Qt.ConnectionType.QueuedConnection)
+
+    @Slot()
+    def _release_retired(self) -> None:
+        self._retired_workers.clear()
 
 
 class TaskSchedulerProxy:
     """Lazy proxy wrapper to defer C++ QObject creation until first access.
 
-    Prevents PyQt6 crashes on Windows when imported before a QCoreApplication
+    Prevents PySide6 crashes on Windows when imported before a QCoreApplication
     instance is fully initialized.
     """
 
@@ -169,7 +192,11 @@ class TaskSchedulerProxy:
             TaskScheduler: The shared task scheduler instance.
         """
         if self._instance is None:
+            # The first touch can come from a background thread (the async
+            # plugin loader); `submit()` moves each worker to this
+            # scheduler's thread, so that must be the GUI one.
             self._instance = TaskScheduler()
+            move_to_gui_thread(self._instance)
         return self._instance
 
     def __getattr__(self, name: str) -> Any:

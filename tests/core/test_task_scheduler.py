@@ -134,13 +134,58 @@ class TestTaskScheduler:
             scheduler._on_task_error("tid", "Internal Failure")
             mock_diag.assert_called()
 
+    def test_lambda_connected_to_worker_finished_is_delivered(self, qtbot, scheduler):
+        """PySide6 delivers a non-bound-method slot through the sender, so a
+        scheduler that destroyed the worker during cleanup silently dropped
+        any lambda a caller had connected to `worker.finished`.
+        """
+        import threading
+
+        from karcytics_sdk.plugin.managed_task import FunctionalTask
+
+        connected = threading.Event()  # hold the task until the slot is connected
+
+        def work():
+            connected.wait(5)
+            return {"result": 8}
+
+        received = []
+        worker = scheduler.submit(FunctionalTask(work, "test"), None)
+        worker.finished.connect(lambda results: received.append(results))
+        del worker  # callers such as RenderPipelineController keep no reference
+        connected.set()
+
+        qtbot.waitUntil(lambda: bool(received), timeout=5000)
+        assert received[0]["result"] == 8
+
+    def test_task_finished_emitted_for_task_submitted_off_the_gui_thread(self, qtbot, scheduler):
+        """A worker created on a plain Python thread belonged to that thread,
+        so the scheduler's own finished slot was delivered through a thread
+        with no event loop and silently dropped.
+        """
+        import threading
+
+        from karcytics_sdk.plugin.managed_task import FunctionalTask
+
+        received = []
+        scheduler.task_finished.connect(lambda task_id, results: received.append(results))
+
+        submitter = threading.Thread(
+            target=lambda: scheduler.submit(FunctionalTask(lambda: {"result": 9}, "test"), None)
+        )
+        submitter.start()
+        submitter.join()
+
+        qtbot.waitUntil(lambda: bool(received), timeout=5000)
+        assert received[0]["result"] == 9
+
     def test_cleanup_signal_disconnect_resilience(self, scheduler):
         """Verify that cleanup handles workers already partially deleted or disconnected."""
         from unittest.mock import MagicMock
 
         mock_worker = MagicMock()
         scheduler._active_workers["ghost"] = mock_worker
-        # Mock disconnect to raise a common PyQt runtime error
+        # Mock disconnect to raise a common Qt runtime error
         mock_worker.finished.disconnect.side_effect = RuntimeError("Signal not connected")
 
         scheduler._cleanup("ghost")

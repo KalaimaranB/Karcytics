@@ -9,14 +9,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from karcytics_sdk.plugin.tutorial_models import ForcedInteractionStep
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QEasingCurve,
     QProcess,
     QPropertyAnimation,
     QSize,
     QTimer,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QLabel,
     QMainWindow,
@@ -82,7 +82,7 @@ class WorkspaceWindow(QMainWindow):
         self.plugin_manager = PluginLoaderManager(self)
 
         self.theme_manager.apply_supplemental_qss()
-        from PyQt6.QtCore import QByteArray
+        from PySide6.QtCore import QByteArray
 
         from karcytics.core.preferences import core_preferences
 
@@ -112,7 +112,7 @@ class WorkspaceWindow(QMainWindow):
         self._last_import_file_count: int = 0
         self.hub_manager.show_home()
         theme_manager.theme_changed.connect(self.theme_manager.on_theme_changed)
-        from PyQt6.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         QTimer.singleShot(400, self.hub_manager.maybe_start_core_intro)
 
@@ -192,7 +192,7 @@ class WorkspaceWindow(QMainWindow):
         Uses the home overlay when on the home screen, and the analysis
         overlay when a module is open.
         """
-        from PyQt6.QtWidgets import QDialog
+        from PySide6.QtWidgets import QDialog
 
         store = self.findChild(QDialog, "PluginStoreDialog")
         if store and store.isVisible() and hasattr(store, "tutorial_overlay"):
@@ -351,7 +351,7 @@ class WorkspaceWindow(QMainWindow):
         if not step and (not has_completion):
             active_overlay.hide()
             return
-        from PyQt6.QtWidgets import QDialog
+        from PySide6.QtWidgets import QDialog
 
         store = self.findChild(QDialog, "PluginStoreDialog")
         prefs = self.findChild(QDialog, "preferences_dialog")
@@ -478,7 +478,7 @@ class WorkspaceWindow(QMainWindow):
                 traceback.print_exc()
                 print(f"DEBUG: ActionStep error: {e}")
             global_tutorial_manager.next_step(step.next_step_id)
-        from PyQt6.QtCore import QRect
+        from PySide6.QtCore import QRect
 
         targets: list[QWidget] = []
         search_root: QWidget = parent_page
@@ -504,7 +504,10 @@ class WorkspaceWindow(QMainWindow):
             global_pos = w.mapToGlobal(w.rect().topLeft())
             local_pos = active_overlay.mapFromGlobal(global_pos)
             rects.append(QRect(local_pos, w.size()))
-        active_overlay.set_targets(rects)
+        from karcytics.ui.components.tutorial_companion import defer_to_companion
+
+        if not defer_to_companion(active_overlay):
+            active_overlay.set_targets(rects)
 
     def _setup_status_bar(self) -> None:
         self.status_bar = QStatusBar()
@@ -528,6 +531,11 @@ class WorkspaceWindow(QMainWindow):
         self.home_screen.workflow_settings_requested.connect(
             self.hub_manager.handle_workflow_settings
         )
+        self.home_screen.workflow_rename_requested.connect(self.hub_manager.handle_workflow_rename)
+        self.home_screen.workflow_duplicate_requested.connect(
+            self.hub_manager.handle_workflow_duplicate
+        )
+        self.home_screen.workflow_delete_requested.connect(self.hub_manager.handle_workflow_delete)
         self.home_screen.trust_module_requested.connect(self.hub_manager.on_trust_requested)
         self.home_screen.open_academy_requested.connect(self.hub_manager.open_academy_from_home)
         self.home_screen.open_academy_for_module_requested.connect(

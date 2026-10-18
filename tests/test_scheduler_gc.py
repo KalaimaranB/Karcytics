@@ -2,7 +2,7 @@ import gc
 import weakref
 
 from karcytics_sdk.plugin import AnalysisBase, PluginState
-from PyQt6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication
 
 from karcytics.core.task_scheduler import task_scheduler
 

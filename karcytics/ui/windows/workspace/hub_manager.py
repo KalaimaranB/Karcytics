@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Callable
 
-from PyQt6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow
 
 from karcytics.shared.ui.alerts import ask_question, show_error
 
@@ -213,6 +213,9 @@ class HubManager:
                                 "timestamp": metadata.get("timestamp", "Unknown Date"),
                                 "description": metadata.get("description", ""),
                                 "tags": metadata.get("tags", []),
+                                # Set by a plugin running Academy courses in
+                                # this workflow (e.g. flow cytometry).
+                                "academy": metadata.get("academy"),
                             }
                         )
 
@@ -264,3 +267,78 @@ class HubManager:
         dialog.attachment_deleted.connect(self.refresh_hub_workflows)
         dialog.workflow_updated.connect(self.refresh_hub_workflows)
         dialog.exec()
+
+    def handle_workflow_rename(self, module_id: str, filename: str) -> None:  # noqa: ARG002
+        """Prompt the user for a new workflow name and persist it.
+
+        Parameters:
+            module_id: The module identifier (unused; reserved for future routing).
+            filename: The workflow JSON filename to rename.
+        """
+        from PySide6.QtWidgets import QInputDialog, QLineEdit
+
+        mw = self.main_window
+
+        # Fetch the current display name to pre-fill the dialog
+        current_name = filename.replace(".json", "")
+
+        from karcytics.core.utils import AtomicJsonFile
+
+        wf_path = mw.project_manager.workflows.wf_dir / filename
+        data = AtomicJsonFile.load(wf_path, default={})
+        current_name = data.get("metadata", {}).get("name", current_name)
+
+        new_name, ok = QInputDialog.getText(
+            mw,
+            "Rename Workflow",
+            "New name:",
+            QLineEdit.EchoMode.Normal,
+            current_name,
+        )
+        if not ok or not new_name.strip():
+            return
+
+        if mw.project_manager.rename_workflow(filename, new_name.strip()):
+            mw.status_bar.showMessage(f"Workflow renamed to '{new_name.strip()}'.", 4000)
+            self.refresh_hub_workflows()
+        else:
+            show_error(mw, "Rename Failed", "Could not rename the workflow. Please try again.")
+
+    def handle_workflow_duplicate(self, module_id: str, filename: str) -> None:  # noqa: ARG002
+        """Duplicate a workflow and refresh the dashboard.
+
+        Parameters:
+            module_id: The module identifier (unused; reserved for future routing).
+            filename: The workflow JSON filename to duplicate.
+        """
+        mw = self.main_window
+        new_filename = mw.project_manager.duplicate_workflow(filename)
+        if new_filename:
+            mw.status_bar.showMessage(
+                f"Workflow duplicated as '{new_filename.replace('.json', '')}'.", 4000
+            )
+            self.refresh_hub_workflows()
+        else:
+            show_error(
+                mw, "Duplicate Failed", "Could not duplicate the workflow. Please try again."
+            )
+
+    def handle_workflow_delete(self, module_id: str, filename: str) -> None:  # noqa: ARG002
+        """Ask for confirmation then permanently delete the workflow.
+
+        Parameters:
+            module_id: The module identifier (unused; reserved for future routing).
+            filename: The workflow JSON filename to delete.
+        """
+        mw = self.main_window
+        if ask_question(
+            mw,
+            "Delete Workflow",
+            "Are you sure you want to permanently delete this workflow and all its data?\n\n"
+            "This cannot be undone.",
+        ):
+            if mw.project_manager.delete_workflow(module_id, filename):
+                mw.status_bar.showMessage("Workflow deleted.", 4000)
+                self.refresh_hub_workflows()
+            else:
+                show_error(mw, "Delete Failed", "Could not delete the workflow. Please try again.")

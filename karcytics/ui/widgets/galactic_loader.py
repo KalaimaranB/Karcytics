@@ -1,8 +1,8 @@
 import logging
 
 from karcytics_sdk.plugin.galactic_loader import QML_PATH
-from PyQt6.QtCore import Qt, QUrl, pyqtSignal
-from PyQt6.QtQuickWidgets import QQuickWidget
+from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtQuickWidgets import QQuickWidget
 
 from karcytics.ui.theme import Colors, theme_manager
 
@@ -18,8 +18,8 @@ class GalacticLoader(QQuickWidget):
     by heavy GIL-locking imports (e.g., pandas/numpy).
     """
 
-    warp_out_finished = pyqtSignal()
-    fade_out_finished = pyqtSignal()
+    warp_out_finished = Signal()
+    fade_out_finished = Signal()
 
     def __init__(self, parent=None):
         """
@@ -95,7 +95,7 @@ class GalacticLoader(QQuickWidget):
         root = self.rootObject()
         if root:
             root.setProperty("moduleName", name)
-            import PyQt6.QtCore as QtCore
+            import PySide6.QtCore as QtCore
 
             QtCore.QMetaObject.invokeMethod(root, "reset")
 
@@ -115,7 +115,7 @@ class GalacticLoader(QQuickWidget):
         """Begin the cinematic warp-out sequence."""
         root = self.rootObject()
         if root:
-            import PyQt6.QtCore as QtCore
+            import PySide6.QtCore as QtCore
 
             QtCore.QMetaObject.invokeMethod(root, "warpOut")
 
@@ -128,17 +128,15 @@ class GalacticLoader(QQuickWidget):
         """
         root = self.rootObject()
         if root:
-            import PyQt6.QtCore as QtCore
+            import PySide6.QtCore as QtCore
 
-            QtCore.QMetaObject.invokeMethod(
-                root, "fadeOut", QtCore.Q_ARG(QtCore.QVariant, duration_ms)
-            )
+            QtCore.QMetaObject.invokeMethod(root, "fadeOut", QtCore.Q_ARG("QVariant", duration_ms))
 
 
 if __name__ == "__main__":
     import sys
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
 
@@ -148,7 +146,7 @@ if __name__ == "__main__":
     loader.show()
 
     # Test warp out after 3 seconds
-    from PyQt6.QtCore import QTimer
+    from PySide6.QtCore import QTimer
 
     QTimer.singleShot(3000, loader.warp_out)
 

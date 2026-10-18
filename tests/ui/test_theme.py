@@ -84,7 +84,7 @@ class TestThemeEngine:
             def applicationFontFamilies(id):  # noqa: N802, A002
                 return ["Mock Tamil Font"]
 
-        monkeypatch.setattr("PyQt6.QtGui.QFontDatabase", MockQFontDatabase)
+        monkeypatch.setattr("PySide6.QtGui.QFontDatabase", MockQFontDatabase)
 
         family = karcytics.ui.theme.get_tamil_font_family()
         assert family == "Mock Tamil Font"
@@ -123,7 +123,7 @@ class TestThemeEngine:
             def applicationFontFamilies(id):  # noqa: N802, A002
                 return []
 
-        monkeypatch.setattr("PyQt6.QtGui.QFontDatabase", MockQFontDatabase)
+        monkeypatch.setattr("PySide6.QtGui.QFontDatabase", MockQFontDatabase)
 
         family = karcytics.ui.theme.get_tamil_font_family()
         assert family == "Noto Sans Tamil"

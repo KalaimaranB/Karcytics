@@ -140,7 +140,7 @@ def test_copy_diagnostic_report_writes_json_to_clipboard(qapp, monkeypatch):  # 
     dialog = DiagnosticsSettingsDialog()
     dialog._copy_diagnostic_report()
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     clipboard_text = QApplication.clipboard().text()
     assert '"timestamp": "now"' in clipboard_text

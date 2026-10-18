@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -99,8 +99,8 @@ class AboutDeveloperDialog(QDialog):
         import urllib.request
         from pathlib import Path
 
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtGui import QImage, QPainter, QPainterPath
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QImage, QPainter, QPainterPath
 
         try:
             cache_dir = Path.home() / ".karcytics" / "cache"

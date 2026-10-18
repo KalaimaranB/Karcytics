@@ -88,7 +88,7 @@ class TestUpdateBannerWidget:
         qtbot.wait(100)
 
         qtbot.mouseClick(
-            banner.btn_close, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+            banner.btn_close, pytest.importorskip("PySide6.QtCore").Qt.MouseButton.LeftButton
         )
 
         assert banner.isHidden()
@@ -100,7 +100,7 @@ class TestUpdateBannerWidget:
         qtbot.wait(100)
 
         qtbot.mouseClick(
-            banner.btn_close, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+            banner.btn_close, pytest.importorskip("PySide6.QtCore").Qt.MouseButton.LeftButton
         )
 
         mock_update_checker.skip_version.assert_not_called()
@@ -112,7 +112,7 @@ class TestUpdateBannerWidget:
         qtbot.wait(100)
 
         qtbot.mouseClick(
-            banner.btn_skip, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+            banner.btn_skip, pytest.importorskip("PySide6.QtCore").Qt.MouseButton.LeftButton
         )
 
         assert banner.isHidden()
@@ -124,7 +124,7 @@ class TestUpdateBannerWidget:
         qtbot.wait(100)
 
         qtbot.mouseClick(
-            banner.btn_skip, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+            banner.btn_skip, pytest.importorskip("PySide6.QtCore").Qt.MouseButton.LeftButton
         )
 
         mock_update_checker.skip_version.assert_called_once_with("2.0.0")
@@ -137,6 +137,6 @@ class TestUpdateBannerWidget:
 
         with patch("webbrowser.open") as mock_open:
             qtbot.mouseClick(
-                banner.btn_download, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+                banner.btn_download, pytest.importorskip("PySide6.QtCore").Qt.MouseButton.LeftButton
             )
             mock_open.assert_called_once_with("https://example.com/dl")

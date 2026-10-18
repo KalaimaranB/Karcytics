@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 
 import requests
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from karcytics.core.network.client import NetworkClient
 from karcytics.core.network.installer import safe_extract
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class PluginInstallerWorker(QThread):
     """Downloads, extracts, and installs a plugin into the user directory."""
 
-    progress = pyqtSignal(int, str)
-    finished = pyqtSignal(bool, str)
+    progress = Signal(int, str)
+    finished = Signal(bool, str)
 
     def __init__(self, plugin_id: str, download_url: str, plugins_dir: Path) -> None:
         """Initialize a plugin installation worker using the per-user plugin directory.

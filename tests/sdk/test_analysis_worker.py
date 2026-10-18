@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from karcytics_sdk.plugin import AnalysisBase, AnalysisWorker, PluginState
-from PyQt6.QtCore import QObject, QThread
+from PySide6.QtCore import QObject, QThread
 
 
 @dataclass

@@ -1,9 +1,9 @@
 import math
 import random
 
-from PyQt6.QtCore import QPointF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPen
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QPointF, Qt, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen
+from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -40,7 +40,7 @@ class AcademyWindow(QDialog):
     Displays all available courses for a given module and tracks progress.
     """
 
-    core_course_requested = pyqtSignal()
+    core_course_requested = Signal()
 
     def __init__(self, tutorial_manager, module_id: str | None = None, parent=None):
         super().__init__(parent)

@@ -3,9 +3,9 @@ import random
 
 from karcytics_sdk.plugin.effects import apply_glow_effect
 from karcytics_sdk.plugin.theme_fallback import Colors
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
 # Animation and Layout Constants
 NODE_COUNT = 50
@@ -32,7 +32,7 @@ OVERLAY_BG_COLOR = (10, 12, 16, 235)
 class CoreCourseCompleteOverlay(QWidget):
     """A premium, tailored completion screen for the core Karcytics onboarding."""
 
-    dismissed = pyqtSignal()
+    dismissed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

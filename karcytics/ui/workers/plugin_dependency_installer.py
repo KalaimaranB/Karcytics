@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 from karcytics_sdk.plugin.manifest_parser import ManifestParser
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from karcytics.core.package_manager import PackageManager
 
@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 class PluginDependencyInstallerWorker(QThread):
     """Background thread to download, cache, and link dependencies for a plugin."""
 
-    progress = pyqtSignal(int)
-    log_message = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    progress = Signal(int)
+    log_message = Signal(str)
+    finished = Signal(bool, str)
 
     def __init__(self, plugin_dir: Path | str, cache_dir: Path | None = None):
         """Initialize the worker for installing dependencies in a plugin directory.

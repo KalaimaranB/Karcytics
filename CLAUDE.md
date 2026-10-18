@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Karcytics is the Hub application: a PyQt6 desktop app (`karcytics/`) that hosts dynamically-loaded analysis plugins (Western Blot, Flow Cytometry, etc., each its own sibling repo). It depends on `karcytics-sdk` (the `Karcytics-SDK` repo, resolved as an editable local path via `[tool.uv.sources]` in `pyproject.toml`) — that package is the *only* thing a plugin is allowed to import from outside its own code.
+Karcytics is the Hub application: a PySide6 desktop app (`karcytics/`) that hosts dynamically-loaded analysis plugins (Western Blot, Flow Cytometry, etc., each its own sibling repo). It depends on `karcytics-sdk` (the `Karcytics-SDK` repo, resolved as an editable local path via `[tool.uv.sources]` in `pyproject.toml`) — that package is the *only* thing a plugin is allowed to import from outside its own code.
 
 See `ECOSYSTEM.md` (this repo's root) for the full map of all 7 Karcytics repos, their process models, and shared conventions — read it before a task that spans more than one repo.
 
@@ -30,6 +30,16 @@ mkdocs serve                                           # docs live preview (mkdo
 Pre-commit (`.pre-commit-config.yaml`, `fail_fast: true`) already runs ruff, mypy, pip-audit, license compliance, the pytest suite (`tests/core`, `tests/sdk`, plus a few root smoke tests, with coverage), SBOM validation, and a conventional-commit-message check on every commit. Don't pre-run the full suite before committing — let the hook gate it; run only the specific test file/module you're touching while iterating.
 
 Qt tests need an offscreen platform: `QT_QPA_PLATFORM=offscreen`.
+
+## Qt binding
+
+PySide6 only (LGPL). PyQt6 is GPL and incompatible with our PolyForm Noncommercial license (issue #134) — never import it. PySide6 differs from PyQt6 in ways the test suite does not always catch:
+
+- A slot that is not a bound method of a `QObject` (a lambda, `functools.partial`, plain function) runs on the **sender's** thread. For a worker moved to a `QThread`, connect its signals to bound methods of a GUI-thread `QObject` (see `PluginLoaderManager`), never to a lambda that touches widgets.
+- That same kind of slot is also delivered *through the sender*: if the sender is destroyed before the queued call runs, the slot is silently dropped. Never let an object be destroyed from inside a slot of its own signal while other slots may still be queued — hold it for one more event-loop turn (see the task scheduler's `_cleanup`/`_release_retired`). This is what left the flow canvas stuck on "Rendering…".
+- Declare a signal carrying a dict as `Signal(object)`, not `Signal(dict)` — PySide6 converts it to a `QVariantMap` and silently drops non-string keys.
+- `shiboken6.isValid(obj)` replaces `not sip.isdeleted(obj)`.
+- A signal is resolved on the instance, so `patch.object(SomeClass, "some_signal")` in a test intercepts nothing; connect a real slot and assert on what it received.
 
 ## Repository layout
 

@@ -1,9 +1,9 @@
 """Module Store and Update Dialog."""
 
 from karcytics_sdk.plugin import DangerButton, ModuleCard, PrimaryButton, SecondaryButton
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
     QDialog,
     QGridLayout,
     QHBoxLayout,
@@ -29,7 +29,7 @@ from karcytics.ui.theme import Colors, theme_manager
 class AvatarLoaderWorker(QThread):
     """Background thread to download avatar images without freezing the UI."""
 
-    finished = pyqtSignal(str, str)  # Emit (author_id, cached_path)
+    finished = Signal(str, str)  # Emit (author_id, cached_path)
 
     def __init__(self, author_id: str, avatar_url: str):
         super().__init__()
@@ -645,7 +645,7 @@ class PluginDetailsDialog(QDialog):
 
 
 class StoreLoaderWorker(QThread):
-    finished = pyqtSignal(dict, list, str)
+    finished = Signal(object, list, str)
 
     def __init__(self, updater, filter_type, parent=None):
         super().__init__(parent)
@@ -1285,7 +1285,7 @@ class PluginStoreDialog(QDialog):
 
     def _install_module(self, plugin_id: str, mod_data: dict):
         """Uses the Logic Engine to install the plugin and update the tracker."""
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         # Briefly show the user that something is happening
         self.status_lbl.setText(f"Installing {mod_data.get('name')}...")
@@ -1319,8 +1319,13 @@ class PluginStoreDialog(QDialog):
 
     def _view_plugin_details(self, plugin_id: str, data: dict):
         """Displays detailed V2 meta inspection dialog."""
+        from karcytics.ui.components.tutorial_companion import attach_tutorial_companion
+
         event_bus.emit(KarcyticsEvent.STORE_MODULE_DETAILS_OPENED)
         dialog = PluginDetailsDialog(plugin_id, data, self, self.module_manager)
+        # The tour's details step happens inside this dialog, above the
+        # store's own overlay — keep Cyto floating beside it.
+        attach_tutorial_companion(dialog, self._on_tutorial_skip)
         dialog.exec()
         event_bus.emit(KarcyticsEvent.STORE_MODULE_DETAILS_CLOSED)
 
@@ -1518,7 +1523,7 @@ class PluginStoreDialog(QDialog):
 
     def _copy_to_clipboard(self, text: str):
         """Helper to copy authority keys to system clipboard."""
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         clipboard = QApplication.clipboard()
         if clipboard is not None:

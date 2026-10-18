@@ -155,6 +155,97 @@ class WorkflowManager:
                 sha256.update(chunk)
         return sha256.hexdigest()
 
+    def rename(self, filename: str, new_name: str) -> bool:
+        """Updates the display name stored in a workflow's metadata block.
+
+        Only the ``metadata.name`` field is changed; the filename on disk is
+        preserved so that all existing references remain valid.
+
+        Args:
+            filename: The workflow JSON filename (basename only).
+            new_name: The new human-readable display name to store.
+
+        Returns:
+            ``True`` if the update was written successfully, ``False`` otherwise.
+        """
+        filepath = self.wf_dir / os.path.basename(filename)
+        data = AtomicJsonFile.load(filepath, default=None)
+        if not data:
+            return False
+
+        try:
+            data.setdefault("metadata", {})["name"] = new_name
+            if not AtomicJsonFile.save(filepath, data):
+                raise OSError("Atomic save failed.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to rename workflow {filename}: {e}")
+            return False
+
+    def duplicate(self, filename: str) -> str | None:
+        """Creates a deep copy of a workflow under a new conflict-free filename.
+
+        The new workflow's ``metadata.name`` is set to ``"<original> (Copy)"``.
+        If an attachments folder exists for the source workflow it is copied
+        verbatim into a correspondingly named attachments folder for the
+        duplicate, and the ``relative_path`` values in the manifest are
+        rewritten to point at the new location.
+
+        Args:
+            filename: The workflow JSON filename (basename only) to duplicate.
+
+        Returns:
+            The new workflow's filename (basename), or ``None`` on failure.
+        """
+        src_path = self.wf_dir / os.path.basename(filename)
+        data = AtomicJsonFile.load(src_path, default=None)
+        if not data:
+            return None
+
+        try:
+            import copy
+
+            new_data = copy.deepcopy(data)
+
+            # Build a conflict-free filename for the copy
+            src_stem = src_path.stem
+            base_stem = f"{src_stem}_copy"
+            dest_path = self.wf_dir / f"{base_stem}.json"
+            counter = 1
+            while dest_path.exists():
+                dest_path = self.wf_dir / f"{base_stem}_{counter}.json"
+                counter += 1
+            new_stem = dest_path.stem
+
+            # Update display name in metadata
+            original_name = new_data.get("metadata", {}).get("name", src_stem)
+            new_data.setdefault("metadata", {})["name"] = f"{original_name} (Copy)"
+
+            # Copy attachments folder if present and rewrite relative_path refs
+            src_att_dir = self.wf_dir / f"{src_stem}_attachments"
+            if src_att_dir.exists() and src_att_dir.is_dir():
+                dest_att_dir = self.wf_dir / f"{new_stem}_attachments"
+                shutil.copytree(src_att_dir, dest_att_dir)
+
+                # Rewrite relative_path inside the attachments manifest
+                for att in new_data.get("attachments", []):
+                    rel = att.get("relative_path", "")
+                    if rel:
+                        # Replace the old stem segment in the path with the new one
+                        att["relative_path"] = rel.replace(
+                            f"workflows/{src_stem}_attachments/",
+                            f"workflows/{new_stem}_attachments/",
+                            1,
+                        )
+
+            if not AtomicJsonFile.save(dest_path, new_data):
+                raise OSError("Atomic save failed for duplicate.")
+
+            return dest_path.name
+        except Exception as e:
+            logger.error(f"Failed to duplicate workflow {filename}: {e}")
+            return None
+
     def delete(self, filename: str) -> bool:
         """Deletes a saved workflow JSON file."""
         file_path = self.wf_dir / os.path.basename(filename)

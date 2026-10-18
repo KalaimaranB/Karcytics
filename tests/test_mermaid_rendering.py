@@ -1,6 +1,6 @@
 import pytest
-from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtWidgets import QApplication
 
 
 @pytest.fixture

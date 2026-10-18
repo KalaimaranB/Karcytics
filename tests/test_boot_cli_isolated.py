@@ -24,7 +24,7 @@ TEST_SPAWN_TIMEOUT_S = 0.2
 
 
 class _FakeSignal:
-    """Stands in for a pyqtSignal: `.connect()` records a callback,
+    """Stands in for a Signal: `.connect()` records a callback,
     `.emit()` invokes every connected callback synchronously and immediately
     — unlike the real cross-thread signal this replaces, there is no queued
     connection to pump via QApplication.processEvents() here, so a test can

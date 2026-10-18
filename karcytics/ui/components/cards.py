@@ -1,7 +1,16 @@
 """Reusable UI Cards for Karcytics."""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+)
 
 from karcytics.ui.theme import Colors, Fonts, theme_manager
 
@@ -9,9 +18,9 @@ from karcytics.ui.theme import Colors, Fonts, theme_manager
 class ModuleCard(QFrame):
     """Clickable card representing one analysis module."""
 
-    clicked = pyqtSignal()
-    trust_requested = pyqtSignal()
-    trust_visual_requested = pyqtSignal()
+    clicked = Signal()
+    trust_requested = Signal()
+    trust_visual_requested = Signal()
 
     def __init__(
         self,
@@ -202,17 +211,50 @@ class ModuleCard(QFrame):
         super().mousePressEvent(event)
 
 
+def academy_workflow_label(academy: dict | None) -> str | None:
+    """The 🎓 pill text for an Academy workflow, from its metadata's ``academy`` block.
+
+    A plugin running Academy courses inside a workflow keeps that block in
+    the workflow's metadata (state, course number, progress), so the Hub
+    can show where the learner is without starting the plugin. None for an
+    ordinary workflow.
+    """
+    if not isinstance(academy, dict):
+        return None
+    state = academy.get("state")
+    number = academy.get("course_number")
+    count = academy.get("course_count")
+    if state in ("running", "paused"):
+        total = academy.get("step_total") or 0
+        percent = f" · {round(100 * (academy.get('step_number') or 0) / total)}%" if total else ""
+        status = "In progress" if state == "running" else "Paused"
+        return f"🎓 Course {number} · {status}{percent}" if number else f"🎓 Academy · {status}"
+    if state == "between_courses":
+        done = academy.get("completed_count") or len(academy.get("completed_courses") or [])
+        return f"🎓 {done} of {count} courses done" if count else "🎓 Academy"
+    if state == "graduated":
+        return "🎓 Academy · all courses done"
+    return "🎓 Academy"
+
+
 class DashboardWorkflowCard(QFrame):
     """Clickable card representing a saved workflow with a settings button.
 
     When ``has_academy=True`` the card shows a 🎓 pill badge and a subtle blue
     left-border accent.  Clicking the pill emits ``academy_requested`` (independent
     from the card's main ``clicked`` signal).
+
+    An Academy workflow (``academy`` is its metadata's ``academy`` block)
+    shows its course status instead — "🎓 Course 2 · Paused · 38%" — in
+    place of the course-count pill, with the same accent.
     """
 
-    clicked = pyqtSignal()
-    settings_requested = pyqtSignal()
-    academy_requested = pyqtSignal()
+    clicked = Signal()
+    settings_requested = Signal()
+    academy_requested = Signal()
+    rename_requested = Signal()
+    duplicate_requested = Signal()
+    delete_requested = Signal()
 
     def __init__(
         self,
@@ -223,10 +265,12 @@ class DashboardWorkflowCard(QFrame):
         tags: list[str] = None,
         has_academy: bool = False,
         course_count: int = 0,
+        academy: dict | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self._has_academy = has_academy
+        academy_label = academy_workflow_label(academy)
+        self._has_academy = has_academy or academy_label is not None
         self.setObjectName("workflowCard")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumSize(220, 130)
@@ -248,7 +292,22 @@ class DashboardWorkflowCard(QFrame):
 
         # Academy badge pill — shown only when courses are registered for this module
         self._academy_btn: QPushButton | None = None
-        if has_academy:
+        self.academy_status_lbl: QLabel | None = None
+        if academy_label is not None:
+            self.academy_status_lbl = QLabel(academy_label)
+            self.academy_status_lbl.setObjectName("workflowAcademyStatus")
+            course_title = academy.get("course_title") if isinstance(academy, dict) else None
+            self.academy_status_lbl.setToolTip(
+                f"Academy workflow — {course_title}" if course_title else "Academy workflow"
+            )
+            theme_manager.apply_style(
+                self.academy_status_lbl,
+                "background: rgba(31, 111, 235, 0.18); color: #79c0ff;"
+                " border: 1px solid #1f6feb; border-radius: 8px;"
+                " padding: 1px 7px; font-size: 10px; font-weight: bold;",
+            )
+            top_row.addWidget(self.academy_status_lbl)
+        elif has_academy:
             label = (
                 f"🎓 {course_count} course" if course_count == 1 else f"🎓 {course_count} courses"
             )
@@ -372,7 +431,15 @@ class DashboardWorkflowCard(QFrame):
         super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
-        """Handle card clicks while excluding clicks on overlay buttons."""
+        """Handle card clicks while excluding clicks on overlay buttons.
+
+        Only left-button presses emit ``clicked``; right-button presses are
+        left to ``contextMenuEvent`` so the context menu never also opens the
+        workflow.
+        """
+        if event.button() != Qt.MouseButton.LeftButton:
+            super().mousePressEvent(event)
+            return
         pos = event.position().toPoint()
         # Ignore clicks on overlay buttons — they handle their own signals
         if self.btn_settings.geometry().contains(pos):
@@ -383,6 +450,57 @@ class DashboardWorkflowCard(QFrame):
             return
         self.clicked.emit()
         super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event) -> None:  # noqa: N802
+        """Show a right-click context menu with Rename, Duplicate, and Delete actions.
+
+        Parameters:
+            event: The context-menu event carrying the global cursor position.
+        """
+        menu = QMenu(self)
+        theme_manager.apply_style(
+            menu,
+            f"""
+            QMenu {{
+                background: {Colors.BG_DARK};
+                border: 1px solid {Colors.BORDER};
+                border-radius: 6px;
+                padding: 4px 0px;
+                color: {Colors.FG_PRIMARY};
+                font-size: 13px;
+            }}
+            QMenu::item {{
+                padding: 6px 20px 6px 12px;
+                border-radius: 4px;
+                margin: 1px 4px;
+            }}
+            QMenu::item:selected {{
+                background: {Colors.BG_MEDIUM};
+                color: {Colors.FG_PRIMARY};
+            }}
+            QMenu::separator {{
+                height: 1px;
+                background: {Colors.BORDER};
+                margin: 3px 8px;
+            }}
+            """,
+        )
+
+        act_rename = QAction("✏️  Rename", self)
+        act_rename.triggered.connect(self.rename_requested.emit)
+        menu.addAction(act_rename)
+
+        act_duplicate = QAction("📋  Duplicate Workflow", self)
+        act_duplicate.triggered.connect(self.duplicate_requested.emit)
+        menu.addAction(act_duplicate)
+
+        menu.addSeparator()
+
+        act_delete = QAction("🗑️  Delete Workflow", self)
+        act_delete.triggered.connect(self.delete_requested.emit)
+        menu.addAction(act_delete)
+
+        menu.exec(event.globalPos())
 
 
 class DetailedWorkflowCard(QFrame):
