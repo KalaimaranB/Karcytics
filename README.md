@@ -56,11 +56,11 @@ Because Karcytics isn't yet notarized with an Apple Developer ID, macOS may init
 
 ## 🧩 Installing Analysis Modules
 
-Karcytics's core application is a lightweight hub. To actually analyze data, you need to download modules (like the Western Blot analyzer) directly within the app.
+Karcytics's core application is a lightweight hub. To actually analyze data, you need to download modules (like the Gel & Blot analyzer) directly within the app.
 
 1. Launch the **Karcytics** core application.
 2. From the Home Screen, navigate to the **Plugin Store**.
-3. Browse the available modules (e.g., **Western Blot Pro**).
+3. Browse the available modules (e.g., **Gel & Blot Analysis**).
 4. Click **Install**. Karcytics will automatically fetch the module from the cloud registry and configure it.
 5. Return to the Home Screen and click the newly installed module to launch your analysis workspace.
 

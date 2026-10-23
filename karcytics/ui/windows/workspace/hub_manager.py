@@ -208,7 +208,7 @@ class HubManager:
                         workflows.append(
                             {
                                 "filename": wf_file.name,
-                                "module_id": metadata.get("module", "western_blot"),
+                                "module_id": metadata.get("module", "unknown"),
                                 "name": metadata.get("name", wf_file.stem),
                                 "timestamp": metadata.get("timestamp", "Unknown Date"),
                                 "description": metadata.get("description", ""),
