@@ -17,7 +17,7 @@ Karcytics is split across 7 sibling repos on disk (all expected as siblings of t
       │   the Hub)     │ │ (isolated)  │  │ (isolated)    │   │ (in_process)     │
       └───────┬────────┘ └─────────────┘  └───────────────┘   └──────────────────┘
               │                              ┌───────────────┐
-              │ loads plugins listed in ───▶ │ western-blot  │
+              │ loads plugins listed in ───▶ │ gel-blot      │
               │ Karcytics-Distribution        │ (isolated)    │
               ▼                              └───────────────┘
       ┌────────────────────┐
@@ -37,7 +37,7 @@ A plugin never imports `karcytics.*` (the Hub) — only `karcytics_sdk` — rega
 | `Karcytics-flow-cytometry` | `karcytics_plugins.flow_cytometry` | `flow_cytometry` | isolated | FCS analysis, gating, compensation, UMAP |
 | `Karcytics-cytometrics` | `karcytics_plugins.cytometrics` | `cytometrics` | isolated | AI (Cellpose) cell morphology quantification |
 | `Karcytics-SyntheticBiology` | `karcytics_plugins.synthetic_biology` | (see its `pyproject.toml`) | in_process | Genetic circuit / logic gate design & simulation |
-| `Karcytics-western-blot` | `karcytics_plugins.western_blot` | `western_blot` | isolated | Densitometry / gel-band quantification |
+| `Karcytics-gel-blot` | `karcytics_plugins.gel_blot` | `gel_blot` | isolated | Gel & Blot: western blot, total-protein stain and gel densitometry (formerly `western_blot`) |
 | `Karcytics-Distribution` | — (no code) | — | — | Plugin registry + root trust store the Hub reads at runtime |
 
 ## Conventions shared across every repo here

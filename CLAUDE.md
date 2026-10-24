@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Karcytics is the Hub application: a PySide6 desktop app (`karcytics/`) that hosts dynamically-loaded analysis plugins (Western Blot, Flow Cytometry, etc., each its own sibling repo). It depends on `karcytics-sdk` (the `Karcytics-SDK` repo, resolved as an editable local path via `[tool.uv.sources]` in `pyproject.toml`) — that package is the *only* thing a plugin is allowed to import from outside its own code.
+Karcytics is the Hub application: a PySide6 desktop app (`karcytics/`) that hosts dynamically-loaded analysis plugins (Gel & Blot, Flow Cytometry, etc., each its own sibling repo). It depends on `karcytics-sdk` (the `Karcytics-SDK` repo, resolved as an editable local path via `[tool.uv.sources]` in `pyproject.toml`) — that package is the *only* thing a plugin is allowed to import from outside its own code.
 
 See `ECOSYSTEM.md` (this repo's root) for the full map of all 7 Karcytics repos, their process models, and shared conventions — read it before a task that spans more than one repo.
 

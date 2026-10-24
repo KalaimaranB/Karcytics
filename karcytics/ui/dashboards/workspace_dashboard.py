@@ -297,7 +297,7 @@ class WorkspaceDashboard(QWidget):
             filename = wf.get("filename", "")
             module_id = wf.get("module_id", "Unknown")
 
-            # Make the module ID prettier (e.g., "western_blot" -> "Western Blot")
+            # Make the module ID prettier (e.g., "flow_cytometry" -> "Flow Cytometry")
             pretty_mod = module_id.replace("_", " ").title()
 
             title = wf.get("name", filename.replace(".json", ""))
